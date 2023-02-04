@@ -145,6 +145,116 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/02/04/CAP-%E7%90%86%E8%AE%BA%E5%92%8C-PACELC-%E7%90%86%E8%AE%BA/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="caffcen">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="caffcen's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/04/CAP-%E7%90%86%E8%AE%BA%E5%92%8C-PACELC-%E7%90%86%E8%AE%BA/" class="post-title-link" itemprop="url">CAP 理论和 PACELC 理论</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-02-04 15:57:20 / Modified: 16:07:14" itemprop="dateCreated datePublished" datetime="2023-02-04T15:57:20+08:00">2023-02-04</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="CAP-理论"><a href="#CAP-理论" class="headerlink" title="CAP 理论"></a>CAP 理论</h1><p>CAP 理论阐述的是，一个分布式系统不可能同时满足<strong>一致性</strong>（consistency）、<strong>可用性</strong>（availability）和<strong>分区容错性</strong>（partition tolerance）这 3 个特性，至多只能满足其中的两个，一般要么满足 CP（一致性+分区容错性），要么满足 AP（可用性+分区容错性）。</p>
+<h2 id="一致性-consistency"><a href="#一致性-consistency" class="headerlink" title="一致性 consistency"></a>一致性 consistency</h2><p>读请求（read request）总是能得到最新的值，也就是说，在任何时间，分布式系统中所有节点对于任一一个值存储的都是相同版本。这便是一致性。</p>
+<h2 id="可用性-availability"><a href="#可用性-availability" class="headerlink" title="可用性 availability"></a>可用性 availability</h2><p>可用性意思是，每一个请求都能够收到非异常返回，但并不保证请求拿到的值就是最新的值。</p>
+<h2 id="分区容错性-partition-tolerance"><a href="#分区容错性-partition-tolerance" class="headerlink" title="分区容错性 partition tolerance"></a>分区容错性 partition tolerance</h2><p>分区（partition）意味着分布式系统的任意一对节点出现了通讯中断。而分区容错性则要求，即便在内部节点出现故障时，整个系统依然能够运行，部分节点之间的网络异常不会导致整个系统的失效。</p>
+<h2 id="分区容错的必要性"><a href="#分区容错的必要性" class="headerlink" title="分区容错的必要性"></a>分区容错的必要性</h2><p>分区容错性是一个分布式系统不可或缺的特性，因为任何系统的任意节点之间都有可能出现网络故障。当一个系统出现分区，部分内部节点无法访问彼此的时候，必须要在一致性和可用性之间做出选择：是为了保障服务依然可用而损害一致性呢，又或者是保障一致性而拒绝服务？</p>
+<p><img src="/images/CAP-%E7%90%86%E8%AE%BA%E5%92%8C-PACELC-%E7%90%86%E8%AE%BA/Drawing%202023-02-04%2015.26.25.excalidraw.png"></p>
+<p>举个例子，考虑上图的情况，假设有两个节点 A 和 B 之间发生了分区的情况，当用户先向节点 B 给 X 变量写一个值后，从节点 A 读取 X 变量，那么系统面临着两个选择：</p>
+<ul>
+<li>它可以选择其中一个请求返回失败，但这样就损害了可用性</li>
+<li>它可以处理两个请求，但是针对读请求返回一个旧的值，但这样就破坏了一致性</li>
+</ul>
+<p>因此，我们能够得出结论：</p>
+<blockquote>
+<p>实际上，CAP 理论要求一个分布式系统在内部节点发生网络故障，分区错误发生时，要么选择保留一致性，要么选择维护可用性。</p>
+</blockquote>
+<h1 id="PACELC-理论"><a href="#PACELC-理论" class="headerlink" title="PACELC 理论"></a>PACELC 理论</h1><p>PACELC 理论是 CAP 理论的补充，以下这段文字摘抄自维基百科 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/PACELC_theorem">PACELC theorem - Wikipedia</a>，它指出了 PACELC 这几个字母的缩写是怎么来的：</p>
+<blockquote>
+<p>In <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Theoretical_computer_science" title="Theoretical computer science">theoretical computer science</a>, the <strong>PACELC theorem</strong> is an extension to the <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/CAP_theorem" title="CAP theorem">CAP theorem</a>. It states that in case of network partitioning (P) in a distributed computer system, one has to choose between availability (A) and consistency (C) (as per the CAP theorem), but else (E), even when the system is running normally in the absence of partitions, one has to choose between latency (L) and consistency (C).</p>
+</blockquote>
+<p>一个分布式系统也不会一直面临着分区网络故障，当内部节点之间不存在通讯问题时，一致性和可用性都是可以得到保证的，特别是可用性基本不会出现问题。</p>
+<p>不过，为了保证一致性，数据在节点之间进行复制时会需要一定的时间，这部分复制时间可能会给用户请求带来不小的延迟，因此，在一致性和延迟（latency）之间有存在利弊权衡：</p>
+<ol>
+<li>系统可以牺牲一致性，不等待值在所有节点写入完成；或者</li>
+<li>保证强一致性，但请求需要等待值在各个节点完成写入后才能够收到返回</li>
+</ol>
+<h2 id="基于-PACELC-理论的系统分类"><a href="#基于-PACELC-理论的系统分类" class="headerlink" title="基于 PACELC 理论的系统分类"></a>基于 PACELC 理论的系统分类</h2><p>我们可以根据系统是否发生了分区错误、分区错误发生时选择维持哪种特性（C 或 A），以及未发生分区错误时系统是否想要保持强一致性，来给分布式系统做如下 4 种分类：</p>
+<table>
+<thead>
+<tr>
+<th>分区错误发生时</th>
+<th>系统没有分区错误</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AP</td>
+<td>EL</td>
+</tr>
+<tr>
+<td>AP</td>
+<td>EC</td>
+</tr>
+<tr>
+<td>CP</td>
+<td>EL</td>
+</tr>
+<tr>
+<td>CP</td>
+<td>EC</td>
+</tr>
+</tbody></table>
+<p>其中的 E 表示 else，举例来说，AP&#x2F;EL 系统在分区错误发生时希望维持系统的可用性，除此之外也就是内部节点没有网络故障时，希望保持低延迟。</p>
+<p>一般来说，一个系统要么希望是高可用、低延迟的，要么总是要求强一致性，因此大多数系统都落到了 AP&#x2F;EL 或 CP&#x2F;EC 这两个类别之中。</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
     <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/01/08/Sliding-Window-%E9%A2%98%E7%9B%AE%E6%80%BB%E7%BB%93/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -168,10 +278,16 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2023-01-08 16:58:18 / Modified: 17:33:23" itemprop="dateCreated datePublished" datetime="2023-01-08T16:58:18+08:00">2023-01-08</time>
+              <time title="Created: 2023-01-08 16:58:18" itemprop="dateCreated datePublished" datetime="2023-01-08T16:58:18+08:00">2023-01-08</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-04 16:07:35" itemprop="dateModified" datetime="2023-02-04T16:07:35+08:00">2023-02-04</time>
+              </span>
 
           
 
@@ -325,12 +441,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">1</span>
+          <span class="site-state-item-count">2</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-count">3</span>
         <span class="site-state-item-name">tags</span>
       </div>
   </nav>
