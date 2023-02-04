@@ -170,7 +170,7 @@
               <span class="post-meta-item-text">Posted on</span>
               
 
-              <time title="Created: 2023-02-04 15:57:20 / Modified: 16:07:14" itemprop="dateCreated datePublished" datetime="2023-02-04T15:57:20+08:00">2023-02-04</time>
+              <time title="Created: 2023-02-04 15:57:20 / Modified: 16:15:04" itemprop="dateCreated datePublished" datetime="2023-02-04T15:57:20+08:00">2023-02-04</time>
             </span>
 
           
@@ -184,7 +184,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="CAP-理论"><a href="#CAP-理论" class="headerlink" title="CAP 理论"></a>CAP 理论</h1><p>CAP 理论阐述的是，一个分布式系统不可能同时满足<strong>一致性</strong>（consistency）、<strong>可用性</strong>（availability）和<strong>分区容错性</strong>（partition tolerance）这 3 个特性，至多只能满足其中的两个，一般要么满足 CP（一致性+分区容错性），要么满足 AP（可用性+分区容错性）。</p>
+          <h1 id="CAP-理论"><a href="#CAP-理论" class="headerlink" title="CAP 理论"></a>CAP 理论</h1><p>CAP 理论阐述的是，一个分布式系统不可能同时满足<strong>一致性</strong>（consistency）、<strong>可用性</strong>（availability）和<strong>分区容错性</strong>（partition tolerance）这 3 个特性，至多只能满足其中的两个，实际上要么满足 CP（一致性+分区容错性），要么满足 AP（可用性+分区容错性）。</p>
 <h2 id="一致性-consistency"><a href="#一致性-consistency" class="headerlink" title="一致性 consistency"></a>一致性 consistency</h2><p>读请求（read request）总是能得到最新的值，也就是说，在任何时间，分布式系统中所有节点对于任一一个值存储的都是相同版本。这便是一致性。</p>
 <h2 id="可用性-availability"><a href="#可用性-availability" class="headerlink" title="可用性 availability"></a>可用性 availability</h2><p>可用性意思是，每一个请求都能够收到非异常返回，但并不保证请求拿到的值就是最新的值。</p>
 <h2 id="分区容错性-partition-tolerance"><a href="#分区容错性-partition-tolerance" class="headerlink" title="分区容错性 partition tolerance"></a>分区容错性 partition tolerance</h2><p>分区（partition）意味着分布式系统的任意一对节点出现了通讯中断。而分区容错性则要求，即便在内部节点出现故障时，整个系统依然能够运行，部分节点之间的网络异常不会导致整个系统的失效。</p>
