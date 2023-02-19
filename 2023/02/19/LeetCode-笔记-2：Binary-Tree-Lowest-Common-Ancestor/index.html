@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"caffcen.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Loweset Common AncestorFrom wikipedia Lowest common ancestor - Wikipedia:  In graph theory and computer science, the lowest common ancestor (LCA) (also called least common ancestor) of two nodes v and">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LeetCode 笔记 2：Binary Tree Lowest Common Ancestor">
+<meta property="og:url" content="https://caffcen.github.io/2023/02/19/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/index.html">
+<meta property="og:site_name" content="caffcen&#39;s blog">
+<meta property="og:description" content="Loweset Common AncestorFrom wikipedia Lowest common ancestor - Wikipedia:  In graph theory and computer science, the lowest common ancestor (LCA) (also called least common ancestor) of two nodes v and">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://caffcen.github.io/images/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/Pasted%20image%2020230219143145.png">
+<meta property="og:image" content="https://caffcen.github.io/images/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/Pasted%20image%2020230219144905.png">
+<meta property="og:image" content="https://caffcen.github.io/images/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/Pasted%20image%2020230219145454.png">
+<meta property="article:published_time" content="2023-02-19T07:00:45.000Z">
+<meta property="article:modified_time" content="2023-02-19T07:03:28.793Z">
+<meta property="article:author" content="caffcen">
+<meta property="article:tag" content="leetcode">
+<meta property="article:tag" content="binary_tree">
+<meta property="article:tag" content="recursion">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://caffcen.github.io/images/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/Pasted%20image%2020230219143145.png">
+
+<link rel="canonical" href="https://caffcen.github.io/2023/02/19/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh_CN'
+  };
+</script>
+
+  <title>LeetCode 笔记 2：Binary Tree Lowest Common Ancestor | caffcen's blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">caffcen's blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/02/19/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="caffcen">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="caffcen's blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          LeetCode 笔记 2：Binary Tree Lowest Common Ancestor
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-02-19 15:00:45 / Modified: 15:03:28" itemprop="dateCreated datePublished" datetime="2023-02-19T15:00:45+08:00">2023-02-19</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="Loweset-Common-Ancestor"><a href="#Loweset-Common-Ancestor" class="headerlink" title="Loweset Common Ancestor"></a>Loweset Common Ancestor</h1><p>From wikipedia <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Lowest_common_ancestor#:~:text=In%20ontologies%2C%20the%20lowest%20common,and%20w%20to%20the%20root.">Lowest common ancestor - Wikipedia</a>:</p>
+<blockquote>
+<p>In <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Graph_theory" title="Graph theory">graph theory</a> and <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Computer_science" title="Computer science">computer science</a>, the <strong>lowest common ancestor</strong> (<strong>LCA</strong>) (also called least common ancestor) of two nodes v and w in a [tree]( <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Tree">https://en.wikipedia.org/wiki/Tree</a>_ (graph_theory) “Tree (graph theory)”) or <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Directed_acyclic_graph" title="Directed acyclic graph">directed acyclic graph</a> (DAG) T is the lowest (i.e. deepest) node that has both v and w as descendants, where we define each node to be a descendant of itself (so if v has a direct connection from w, w is the lowest common ancestor).</p>
+</blockquote>
+<p>概念很简单，举几个例子：</p>
+<p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/Pasted%20image%2020230219143145.png"></p>
+<ul>
+<li>A 和 B 的 LCA 是 A；</li>
+<li>B 和 C 的 LCA 是 A;</li>
+<li>D 和 E 的 LCA 是 A;</li>
+<li>E 和 I 的 LCA 是 C;</li>
+<li>D 和 F 的 LCA 是 A;</li>
+<li>G 和 H 的 LCA 是 D;</li>
+<li>C 和 F 的 LCA 是 C;</li>
+</ul>
+<h1 id="思路"><a href="#思路" class="headerlink" title="思路"></a>思路</h1><p>大部分的二叉树题目，首先想到的是递归的解法，这是因为二叉树的数据结构特点所致：我们只知道当前节点和当前节点的相连节点的信息，而不知道全局信息。</p>
+<p>那么，如何求解给定的任意另个 Node <code>X</code> 和 <code>Y</code> 的 <code>LCA</code> 呢？思路是这样的：</p>
+<ol>
+<li>我们从下往上，遇到 <code>X</code> 或者 <code>Y</code> 的时候，将它们返回给上层；遇到非 <code>X</code> 或者 <code>Y</code> 的节点则返回 <code>null</code></li>
+<li>当上层 Node 拿到两个非空节点是，当前节点即为 <code>LCA</code> ，将当前节点返回</li>
+<li>当上层 Node 拿到一个空节点一个非空节点时，那个非空节点要么是 <code>LCA</code> , 要么是 <code>X</code> 或者 <code>Y</code> , 我们继续将非空节点返回给上层处理即可</li>
+</ol>
+<p>因为对于任意给定的两个节点 <code>X</code> 或者 <code>Y</code> 来说，它们的 <code>LCA</code> ：</p>
+<ol>
+<li>要么是 <code>X</code> 或者 <code>Y</code> 其中的一个，这表示其中一个节点位于另一个节点的子树之中；</li>
+<li>要么是 <code>X</code> 或者 <code>Y</code> 的上层节点，这表示 <code>X</code> 和 <code>Y</code> 都位于它们的 <code>LCA</code> 子树之中。</li>
+</ol>
+<p>而我们的算法在递归的过程中，至多只会遇到一次，左子树返回和右子树返回均不为空的情况；否则，我们将非空节点返回即可，该非空节点即为题目所求的 <code>LCA</code> ：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> TreeNode <span class="title function_">lowestCommonAncestor</span><span class="params">(TreeNode root, TreeNode p, TreeNode q)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (root == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (root == p || root == q) &#123;</span><br><span class="line">            <span class="keyword">return</span> root;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="type">TreeNode</span> <span class="variable">left</span> <span class="operator">=</span> lowestCommonAncestor(root.left, p, q);</span><br><span class="line">        <span class="type">TreeNode</span> <span class="variable">right</span> <span class="operator">=</span> lowestCommonAncestor(root.right, p, q);</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (left != <span class="literal">null</span> &amp;&amp; right != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> root;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (left != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> left;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> right;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="例题"><a href="#例题" class="headerlink" title="例题"></a>例题</h1><p><strong>Example 1</strong></p>
+<p><a target="_blank" rel="noopener" href="https://leetcode.com/problems/lowest-common-ancestor-of-deepest-leaves/">1123. Lowest Common Ancestor of Deepest Leaves</a></p>
+<p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/Pasted%20image%2020230219144905.png"></p>
+<p>这道题是找出深度最深的所有叶子结点的 <code>LCA</code> ，只需分解成两个步骤：</p>
+<ol>
+<li>找到最大深度（ <code>DFS</code> ）</li>
+<li>找到最大深度叶子结点的 <code>LCA</code></li>
+</ol>
+<p>最大深度的叶子结点可能有多个，但这不妨碍我们算法的步骤和正确性：</p>
+<ol>
+<li>对于最大深度的叶子结点，返回自身；</li>
+<li>对非最大深度的节点，如果左子树返回和右子树返回均不为空，说明该节点为 <code>LCA</code> ，返回自身；否则返回左子树和右子树的非空返回；</li>
+</ol>
+<p>解法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">int</span> <span class="variable">deepestDepth</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> TreeNode <span class="title function_">lcaDeepestLeaves</span><span class="params">(TreeNode root)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (root.left == <span class="literal">null</span> &amp;&amp; root.right == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> root;</span><br><span class="line">        &#125;</span><br><span class="line">        findDeepestDepth(root, <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">return</span> lca(root, <span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> TreeNode <span class="title function_">lca</span><span class="params">(TreeNode root, <span class="type">int</span> depth)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (root == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">TreeNode</span> <span class="variable">leftRet</span> <span class="operator">=</span> lca(root.left, depth + <span class="number">1</span>);</span><br><span class="line">        <span class="type">TreeNode</span> <span class="variable">rightRet</span> <span class="operator">=</span> lca(root.right, depth + <span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (depth == deepestDepth) &#123;</span><br><span class="line">            <span class="keyword">return</span> root;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (leftRet != <span class="literal">null</span> &amp;&amp; rightRet != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> root;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (leftRet != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> leftRet;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> rightRet;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">findDeepestDepth</span><span class="params">(TreeNode root, <span class="type">int</span> depth)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (root == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        deepestDepth = Math.max(deepestDepth, depth);</span><br><span class="line">        findDeepestDepth(root.left, depth + <span class="number">1</span>);</span><br><span class="line">        findDeepestDepth(root.right, depth + <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>Example 2</strong></p>
+<p><a target="_blank" rel="noopener" href="https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/">235. Lowest Common Ancestor of a Binary Search Tree</a></p>
+<p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/Pasted%20image%2020230219145454.png"></p>
+<p>这道题目的区别是，数据结构换成了 BST，根据 BST 的性质我们可以，对于任意节点 <code>X</code> 和 <code>Y</code> 来说，它们的 <code>LCA</code> 一定满足： <code>X.val &lt;= LCA.val &amp;&amp; LCA.val &lt;= Y.val</code> 。</p>
+<p>我们只要从上到下，递归地寻到满足这一布尔条件式的节点即可：</p>
+<ol>
+<li>如果 <code>LCA.val &lt; X.val &amp;&amp; LCA.val &lt; Y.val</code> ，那么当前节点的值太小，我们去右子树中递归寻找；</li>
+<li>如果 <code>LCA.val &gt; X.val &amp;&amp; LCA.val &gt; Y.val</code> ，那么当前节点值太大，我们去左子树中递归寻找；</li>
+<li>否则，当前节点值落在了 <code>X.val</code> 和 <code>Y.val</code> 之间，说明当前节点即为我们要找的 <code>LCA</code></li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> TreeNode <span class="title function_">lowestCommonAncestor</span><span class="params">(TreeNode root, TreeNode p, TreeNode q)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (root.val &gt; p.val &amp;&amp; root.val &gt; q.val) &#123;</span><br><span class="line">            <span class="keyword">return</span> lowestCommonAncestor(root.left, p, q);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (root.val &lt; p.val &amp;&amp; root.val &lt; q.val) &#123;</span><br><span class="line">            <span class="keyword">return</span> lowestCommonAncestor(root.right, p, q);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> root;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="LCA-题目"><a href="#LCA-题目" class="headerlink" title="LCA 题目"></a>LCA 题目</h1><ol>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/">235. Lowest Common Ancestor of a Binary Search Tree</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/">236. Lowest Common Ancestor of a Binary Tree</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/smallest-subtree-with-all-the-deepest-nodes/">865. Smallest Subtree with all the Deepest Nodes</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/lowest-common-ancestor-of-deepest-leaves/">1123. Lowest Common Ancestor of Deepest Leaves</a></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/leetcode/" rel="tag"># leetcode</a>
+              <a href="/tags/binary-tree/" rel="tag"># binary_tree</a>
+              <a href="/tags/recursion/" rel="tag"># recursion</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/02/19/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7%E5%92%8C%E6%8C%81%E4%B9%85%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/" rel="prev" title="本地事务的原子性和持久性是如何实现的">
+      <i class="fa fa-chevron-left"></i> 本地事务的原子性和持久性是如何实现的
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Loweset-Common-Ancestor"><span class="nav-number">1.</span> <span class="nav-text">Loweset Common Ancestor</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%9D%E8%B7%AF"><span class="nav-number">2.</span> <span class="nav-text">思路</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BE%8B%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text">例题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#LCA-%E9%A2%98%E7%9B%AE"><span class="nav-number">4.</span> <span class="nav-text">LCA 题目</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">caffcen</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">5</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">caffcen</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
