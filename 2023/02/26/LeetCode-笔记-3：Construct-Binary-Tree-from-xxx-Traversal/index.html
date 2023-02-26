@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"caffcen.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="这一类题目（具体题目可以参考文末的链接）要求我们从 inorder, preorder 及 postorder traversal 其中的两个构建出二叉树，之所以能够通过这三种遍历方式中的两个就构建出整棵二叉树，是因为任意两种遍历方式都能够帮助我们递归地找出当前 subroot 的 left 和 right subtree 的范围。而这要从这三种遍历方式的特点说起： 123456789101112">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LeetCode 笔记 3：Construct Binary Tree from xxx Traversal">
+<meta property="og:url" content="https://caffcen.github.io/2023/02/26/LeetCode-%E7%AC%94%E8%AE%B0-3%EF%BC%9AConstruct-Binary-Tree-from-xxx-Traversal/index.html">
+<meta property="og:site_name" content="caffcen&#39;s blog">
+<meta property="og:description" content="这一类题目（具体题目可以参考文末的链接）要求我们从 inorder, preorder 及 postorder traversal 其中的两个构建出二叉树，之所以能够通过这三种遍历方式中的两个就构建出整棵二叉树，是因为任意两种遍历方式都能够帮助我们递归地找出当前 subroot 的 left 和 right subtree 的范围。而这要从这三种遍历方式的特点说起： 123456789101112">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://caffcen.github.io/images/LeetCode-%E7%AC%94%E8%AE%B0-3%EF%BC%9AConstruct-Binary-Tree-from-xxx-Traversal/Pasted%20image%2020230226144205.png">
+<meta property="og:image" content="https://caffcen.github.io/images/LeetCode-%E7%AC%94%E8%AE%B0-3%EF%BC%9AConstruct-Binary-Tree-from-xxx-Traversal/Pasted%20image%2020230226152220.png">
+<meta property="article:published_time" content="2023-02-26T07:51:14.000Z">
+<meta property="article:modified_time" content="2023-02-26T07:54:09.994Z">
+<meta property="article:author" content="caffcen">
+<meta property="article:tag" content="leetcode">
+<meta property="article:tag" content="binary_tree">
+<meta property="article:tag" content="recursion">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://caffcen.github.io/images/LeetCode-%E7%AC%94%E8%AE%B0-3%EF%BC%9AConstruct-Binary-Tree-from-xxx-Traversal/Pasted%20image%2020230226144205.png">
+
+<link rel="canonical" href="https://caffcen.github.io/2023/02/26/LeetCode-%E7%AC%94%E8%AE%B0-3%EF%BC%9AConstruct-Binary-Tree-from-xxx-Traversal/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh_CN'
+  };
+</script>
+
+  <title>LeetCode 笔记 3：Construct Binary Tree from xxx Traversal | caffcen's blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">caffcen's blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/02/26/LeetCode-%E7%AC%94%E8%AE%B0-3%EF%BC%9AConstruct-Binary-Tree-from-xxx-Traversal/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="caffcen">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="caffcen's blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          LeetCode 笔记 3：Construct Binary Tree from xxx Traversal
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-02-26 15:51:14 / Modified: 15:54:09" itemprop="dateCreated datePublished" datetime="2023-02-26T15:51:14+08:00">2023-02-26</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>这一类题目（具体题目可以参考文末的链接）要求我们从 <code>inorder</code>, <code>preorder</code> 及 <code>postorder</code> traversal 其中的两个构建出二叉树，之所以能够通过这三种遍历方式中的两个就构建出整棵二叉树，是因为任意两种遍历方式都能够帮助我们递归地找出当前 <code>subroot</code> 的 left 和 right subtree 的范围。而这要从这三种遍历方式的特点说起：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">TreeNode</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> val;  </span><br><span class="line">    TreeNode left;  </span><br><span class="line">    TreeNode right;  </span><br><span class="line"></span><br><span class="line">    TreeNode() &#123;  </span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    TreeNode(<span class="type">int</span> val) &#123;  </span><br><span class="line">        <span class="built_in">this</span>.val = val;  </span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    TreeNode(<span class="type">int</span> val, TreeNode left, TreeNode right) &#123;  </span><br><span class="line">        <span class="built_in">this</span>.val = val;  </span><br><span class="line">        <span class="built_in">this</span>.left = left;  </span><br><span class="line">        <span class="built_in">this</span>.right = right;  </span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">preorder</span><span class="params">(TreeNode root, List&lt;Integer&gt; list)</span> &#123;  </span><br><span class="line">        <span class="keyword">if</span> (root == <span class="literal">null</span>) &#123;  </span><br><span class="line">            <span class="keyword">return</span>;  </span><br><span class="line">        &#125;  </span><br><span class="line">        list.add(root.val);  </span><br><span class="line">        preorder(root.left, list);  </span><br><span class="line">        preorder(root.right, list);  </span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">postorder</span><span class="params">(TreeNode root, List&lt;Integer&gt; list)</span> &#123;  </span><br><span class="line">        <span class="keyword">if</span> (root == <span class="literal">null</span>) &#123;  </span><br><span class="line">            <span class="keyword">return</span>;  </span><br><span class="line">        &#125;  </span><br><span class="line">        postorder(root.left, list);  </span><br><span class="line">        postorder(root.right, list);  </span><br><span class="line">        list.add(root.val);  </span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">inorder</span><span class="params">(TreeNode root, List&lt;Integer&gt; list)</span> &#123;  </span><br><span class="line">        <span class="keyword">if</span> (root == <span class="literal">null</span>) &#123;  </span><br><span class="line">            <span class="keyword">return</span>;  </span><br><span class="line">        &#125;  </span><br><span class="line">        inorder(root.left, list);  </span><br><span class="line">        list.add(root.val);  </span><br><span class="line">        inorder(root.right, list);  </span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>inorder</code></th>
+<th><code>preorder</code></th>
+<th><code>postorder</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>节点遍历顺序</td>
+<td><code>root.left</code> -&gt; <code>root</code> -&gt; <code>root.right</code></td>
+<td><code>root</code> -&gt; <code> root. left</code> -&gt; <code>root.right</code></td>
+<td><code>root.left</code> -&gt; <code>root.right</code> -&gt; <code>root</code></td>
+</tr>
+<tr>
+<td>subroot 在 sublist 中的位置 （sublist 指遍历 subroot 所在的子树而构成的序列）</td>
+<td>无法单独确定</td>
+<td><code>sublist[0]</code></td>
+<td><code>sublist[sublist.length - 1]</code></td>
+</tr>
+<tr>
+<td>特性</td>
+<td></td>
+<td>根据 <code>preorder</code> 的特性，<code>subroot</code> 在当前子序列中的下一个元素一定是 <code>subroot.left</code> （如果还有的话），也就是 <code>subroot.left = sublist[1]</code></td>
+<td>根据 <code>postorder</code> 的特性，<code>subroot</code> 在当前子序列中的前一个元素一定是 <code>subroot.right</code> （如果还有的话），也就是 <code>subroot.right = sublist[sublist.length - 2]</code></td>
+</tr>
+<tr>
+<td>子序列情况</td>
+<td><code>[左子树子序列][subroot][右子树子序列]</code></td>
+<td><code>[subroot][左子树子序列][右子树子序列]</code></td>
+<td><code>[左子树子序列][右子树子序列][subroot]</code></td>
+</tr>
+</tbody></table>
+<p>我们可以总结出，可以很容易从 <code>preorder</code> 以及 <code>postorder</code> 序列中得到 <code>subroot</code> 的值，这是因为 <code>subroot</code> 在这两种递归算法中总是被优先以及最后处理的，所以 <code>subroot</code> 总是出现在子序列的开头或者末尾。</p>
+<p>而 <code>inorder</code> 则无法单独判断出 <code>subroot</code> 的位置，但一旦从 <code>preorder</code> 和 <code>postorder</code> 中知道 <code>subroot</code> 的值，那么就可以轻松知道 <code>subroot</code> 的左子树和右子树的范围（在 <code>inorder</code> 序列中，找到 <code>subroot</code> 的 index，位于 index 左边的归属于左子树，右边的归属于右子树）。</p>
+<p>而且，一旦我们知道了左子树和右子树的数组长度，我们就可以很轻易地计算出 <code>subroot.left</code> 以及 <code>subroot.right</code> 在 <code>preorder</code> 以及 <code>postorder</code> 数组中的下标了。</p>
+<p>因此，我们也就可以递归地从 3 种遍历序列中构建出整棵二叉树。</p>
+<h1 id="例题"><a href="#例题" class="headerlink" title="例题"></a>例题</h1><p><strong>Example 1</strong>: <a target="_blank" rel="noopener" href="https://leetcode.com/problems/construct-binary-tree-from-%60preorder%60-and-%60inorder%60-traversal/">105. Construct Binary Tree from <code>preorder</code> and <code>inorder</code> Traversal</a></p>
+<p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-3%EF%BC%9AConstruct-Binary-Tree-from-xxx-Traversal/Pasted%20image%2020230226144205.png"></p>
+<p>通过之前的讨论，我们通过 <code>preorder</code> 可以知道 <code>subroot</code> 的位置，那么，在 <code>inorder</code> 数组中找到 <code>subroot</code> 的 <code>index</code> ，位于 <code>index</code> 左边和右边的子序列就对应当前 <code>subroot</code> 的左子树以及右子树，确定左子树和右子树的范围也不再是难事。</p>
+<p>算法如下：</p>
+<ul>
+<li><code>rootPreIndex</code> ： 当前 <code>subroot</code> 在 <code>inorder</code> 数组的 <code>index</code></li>
+<li><code>inorderLeft</code> , <code>inorderRight</code> : 当前子树用到的 <code>inorder</code> 数组的左边界和右边界，用于控制递归终止的条件（base case）</li>
+<li>找到 <code>subroot</code> 在 <code>inorder</code> 数组中的 <code>index</code> ： <code>rootInorderIndex</code></li>
+<li>计算 <code>subroot.left</code> 子树的长度 <code>leftSubTreeSize = rootInorderIndex - inorderLeft</code></li>
+<li>递归地构造左子树： <code>root.left = build(preorder, inorder, rootPreIndex + 1, inorderLeft, rootInorderIndex - 1);</code> ，其中：<ul>
+<li><code>rootPreIndex + 1</code> 表示 <code>root.left</code> 在 <code>preorder</code> 数组的 <code>index</code> ；</li>
+<li>左子树在 <code>inorder</code> 数组中的左边界和当前 <code>subroot</code> 是共享的： <code>inorderLeft</code> ；</li>
+<li>左子树在 <code>inorder</code> 数组中的右边界应该是 <code>subroot</code> 在 <code>inorder</code> 数组中的 <code>index</code> 减去 1： <code>rootInorderIndex - 1</code> ；</li>
+<li>也就是 <code>[inorderLeft, rootInorderIndex - 1]</code> 是左子树在 <code>inorder</code> 数组中的范围；</li>
+</ul>
+</li>
+<li>递归地构造右子树： <code>root.right = build(preorder, inorder, rootPreIndex + leftSubTreeSize + 1, rootInorderIndex + 1, inorderRight);</code> ，其中：<ul>
+<li><code>subroot.right</code> 在 <code>preorder</code> 数组中的 <code>index</code> 应该是 <code>rootPreIndex</code> 加上 <code>subroot</code> 的左子树的长度： <code>subrootPreIndex + leftSubTreeSize + 1</code> ；</li>
+<li><code>subroot.right</code> 在 <code>inorder</code> 数组中的左边界应该是 <code>rootInorderIndex + 1</code> ；</li>
+<li><code>subroot.right</code> 在 <code>inorder</code> 数组中的右边界应该是和当前 <code>subroot</code> 共享的，因此</li>
+<li><code>[rootInorderIndex + 1, inorderRight]</code> 是右子树在 <code>inorder</code> 数组中的范围</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> TreeNode <span class="title function_">buildTree</span><span class="params">(<span class="type">int</span>[] preorder, <span class="type">int</span>[] inorder)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> build(preorder, inorder, <span class="number">0</span>, <span class="number">0</span>, inorder.length - <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> TreeNode <span class="title function_">build</span><span class="params">(<span class="type">int</span>[] preorder, <span class="type">int</span>[] inorder, <span class="type">int</span> rootPreIndex, <span class="type">int</span> inorderLeft, <span class="type">int</span> inorderRight)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (inorderLeft &gt; inorderRight || rootPreIndex &lt; <span class="number">0</span> || rootPreIndex &gt;= preorder.length) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">TreeNode</span> <span class="variable">root</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">TreeNode</span>(preorder[rootPreIndex]);</span><br><span class="line"></span><br><span class="line">        <span class="type">int</span> <span class="variable">rootInorderIndex</span> <span class="operator">=</span> -<span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; inorder.length; ++i) &#123;</span><br><span class="line">            <span class="keyword">if</span> (inorder[i] == root.val) &#123;</span><br><span class="line">                rootInorderIndex = i;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">int</span> <span class="variable">leftSubTreeSize</span> <span class="operator">=</span> rootInorderIndex - inorderLeft;</span><br><span class="line"></span><br><span class="line">        root.left = build(preorder, inorder, rootPreIndex + <span class="number">1</span>, inorderLeft, rootInorderIndex - <span class="number">1</span>);</span><br><span class="line">        root.right = build(preorder, inorder, rootPreIndex + leftSubTreeSize + <span class="number">1</span>, rootInorderIndex + <span class="number">1</span>, inorderRight);</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> root;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>Example 2</strong>: <a target="_blank" rel="noopener" href="https://leetcode.com/problems/construct-binary-tree-from-%60preorder%60-and-%60postorder%60-traversal/">889. Construct Binary Tree from preorder and postorder Traversal</a></p>
+<p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-3%EF%BC%9AConstruct-Binary-Tree-from-xxx-Traversal/Pasted%20image%2020230226152220.png"></p>
+<p>这道题目和之前的类似，只不过换成了 <code>preorder</code> 和 <code>postorder</code> 的组合，这也导致我们能够利用的信息有了变化：我们不再能通过 <code>inorder</code> 计算出左子树以及右子树的长度了，我们得通过另外的途径来进行计算。</p>
+<p>之前也有提到过， <code>preoder</code> 和 <code>postorder</code> 有一个特性，就是：</p>
+<ul>
+<li>① 假设 <code>subroot</code> 在 <code>preorder</code> 中的下标是 <code>rootPreIndex</code> ，那么 <code>subroot.left</code> 在 <code>preorder</code> 中的下标一定是 <code>rootPreIndex + 1</code> ；</li>
+<li>② 假设 <code>subroot</code> 在 <code>postorder</code> 中的下标是 <code>rootPostIndex</code> ，那么 <code>subroot.right</code> 在 <code>postorder</code> 的下标一定是 <code>rootPostIndex - 1</code> ；</li>
+</ul>
+<p>我们再结合两种遍历所构成的子序列的情况一起分析：</p>
+<ul>
+<li>③ <code>preorder</code> 子序列情况： <code>[subroot][左子树子序列][右子树子序列]</code></li>
+<li>④ <code>postorder</code> 子序列情况： <code>[左子树子序列][右子树子序列][subroot]</code></li>
+</ul>
+<p>那么，我们可以通过结合 ② 和 ③，可以导出：</p>
+<ul>
+<li>我们通过 ② 知道了 <code>subroot.right</code> 的值，就可以得到它在 <code>preorder</code> 中的位置，它位于 <code>preorder</code> 数组中 <code>[右子树子序列]</code> 的第一个位置；</li>
+<li>既然知道了右子树在 <code>preorder</code> 中的位置，那么左子树的长度就可以通过： <code>rightSubrootPreIndex - subrootPreIndex - 1</code> 得到；</li>
+<li>右子树的长度当然也可以通过当前 <code>preorder</code> 的右边界减去 <code>subroot.right</code> 在 <code>preorder</code> 中的 <code>index</code> 得到</li>
+</ul>
+<p>同样，我们结合 ① 和 ④，也可以推断得到：</p>
+<ul>
+<li>我们通过 ① 知道了 <code>subroot.left</code> 的值，那么就可以知道 <code>subroot.left</code> 在 <code>postorder</code> 数组中的位置，它一定处在 <code>postorder</code> 数组中的 <code>[左子树子序列] </code> 的最后一个位置；</li>
+<li>既然知道了左子树序列的首尾位置，那么就可以计算出左子树的长度： <code>leftSubrootPostIndex - postLeft + 1</code> ；</li>
+</ul>
+<p>那么，现在我们获得了递归算法所需的一切条件：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> TreeNode <span class="title function_">constructFromPrePost</span><span class="params">(<span class="type">int</span>[] preorder, <span class="type">int</span>[] postorder)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> build(preorder, postorder, <span class="number">0</span>, preorder.length - <span class="number">1</span>, <span class="number">0</span>, postorder.length - <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> TreeNode <span class="title function_">build</span><span class="params">(<span class="type">int</span>[] pre, <span class="type">int</span>[] post, <span class="type">int</span> preLeft, <span class="type">int</span> preRight, <span class="type">int</span> postLeft, <span class="type">int</span> postRight)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (preLeft &gt; preRight) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">TreeNode</span> <span class="variable">root</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">TreeNode</span>(pre[preLeft]);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (preLeft + <span class="number">1</span> &gt; preRight) &#123;</span><br><span class="line">            <span class="keyword">return</span> root;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">int</span> leftSubRootPostIndex;</span><br><span class="line">        <span class="keyword">for</span> (leftSubRootPostIndex = postLeft; leftSubRootPostIndex &lt;= postRight; ++leftSubRootPostIndex) &#123;</span><br><span class="line">            <span class="keyword">if</span> (post[leftSubRootPostIndex] == pre[preLeft + <span class="number">1</span>]) &#123;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">int</span> <span class="variable">leftSubtreeLength</span> <span class="operator">=</span> leftSubRootPostIndex - postLeft + <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">        root.left = build(pre, post, preLeft + <span class="number">1</span>, preLeft + leftSubtreeLength, postLeft, postLeft + leftSubtreeLength - <span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">        root.right = build(pre, post, preLeft + leftSubtreeLength + <span class="number">1</span>, preRight, postLeft + leftSubtreeLength, postRight - <span class="number">1</span>);</span><br><span class="line">        <span class="keyword">return</span> root;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="题目"><a href="#题目" class="headerlink" title="题目"></a>题目</h1><ul>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/construct-binary-tree-from-%60preorder%60-and-%60inorder%60-traversal/">105. Construct Binary Tree from preorder and inorder Traversal</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/construct-binary-tree-from-%60inorder%60-and-%60postorder%60-traversal/">106. Construct Binary Tree from inorder and postorder Traversal</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/construct-binary-tree-from-%60preorder%60-and-%60postorder%60-traversal/">889. Construct Binary Tree from preorder and postorder Traversal</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/construct-binary-search-tree-from-%60preorder%60-traversal/">1008. Construct Binary Search Tree from preorder Traversal</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/leetcode/" rel="tag"># leetcode</a>
+              <a href="/tags/binary-tree/" rel="tag"># binary_tree</a>
+              <a href="/tags/recursion/" rel="tag"># recursion</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/02/19/LeetCode-%E7%AC%94%E8%AE%B0-2%EF%BC%9ABinary-Tree-Lowest-Common-Ancestor/" rel="prev" title="LeetCode 笔记 2：Binary Tree Lowest Common Ancestor">
+      <i class="fa fa-chevron-left"></i> LeetCode 笔记 2：Binary Tree Lowest Common Ancestor
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BE%8B%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">例题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A2%98%E7%9B%AE"><span class="nav-number">2.</span> <span class="nav-text">题目</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">caffcen</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">6</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">caffcen</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
