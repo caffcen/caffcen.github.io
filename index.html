@@ -145,6 +145,145 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/04/02/LeetCode-%E7%AC%94%E8%AE%B0-5%EF%BC%9ASearch-in-Rotated-Sorted-Array/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="caffcen">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="caffcen's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/04/02/LeetCode-%E7%AC%94%E8%AE%B0-5%EF%BC%9ASearch-in-Rotated-Sorted-Array/" class="post-title-link" itemprop="url">LeetCode 笔记 5：Search in Rotated Sorted Array</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-04-02 16:09:48 / Modified: 16:12:01" itemprop="dateCreated datePublished" datetime="2023-04-02T16:09:48+08:00">2023-04-02</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>今天要讲的题目都使用到了二分查找（或者和二分查找紧密相关），同时又都是基于一个 Rotated Sorted Array。那么先从 Rotated Sorted Array 的特点讲起吧。</p>
+<p>Rotated Sorted Array 的定义是这样子的：</p>
+<blockquote>
+<p>There is an integer array <code>nums</code> sorted in ascending order (with <strong>distinct</strong> values). <code>nums</code> is <strong>possibly rotated</strong> at an unknown pivot index <code>k</code> (<code>1 &lt;= k &lt; nums.length</code>) such that the resulting array is <code>[nums[k], nums[k+1], ..., nums[n-1], nums[0], nums[1], ..., nums[k-1]]</code> (<strong>0-indexed</strong>).</p>
+</blockquote>
+<p>就拿 <code>int[] nums = new int[]&#123;0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10&#125;;</code> 举例好了，如果 <code>nums</code> 在 <code>nums[4]</code> 位置进行旋转，那么它将变成： <code>&#123;4, 5, 6, 7, 8, 9, 10, 0, 1, 2, 3&#125;</code> ，那么我们能够观察到几个特性：</p>
+<ol>
+<li><code>nums</code> 被分成了两个区间，两个区间都是排好序的（严格上升）</li>
+<li><code>nums</code> 第二个区间的所有元素小于第一个区间的最小元素</li>
+</ol>
+<p>拿 <code>&#123;4, 5, 6, 7, 8, 9, 10, 0, 1, 2, 3&#125;</code> 举例来说，从 <code>nums[0]</code> 到 <code>nums[5]</code> 是第一个区间（ <code>&#123;4, 5, 6, 7, 8, 9, 10&#125;</code> ），这个区间是排好序的，从 <code>nums[6]</code> 到 <code>nums[9]</code> 是第二个区间，第二个区间也是排好序的。同时第二个区间的所有值均小于第一个区间的所有值。</p>
+<p>根据这两个特性，我们就能够在子区间中使用二分查找来缩小查找范围了。如何在 rotated sorted array 中使用二分查找算法，请看题：</p>
+<h1 id="Search-in-Rotated-Sorted-Array"><a href="#Search-in-Rotated-Sorted-Array" class="headerlink" title="Search in Rotated Sorted Array"></a>Search in Rotated Sorted Array</h1><h2 id="题目-1"><a href="#题目-1" class="headerlink" title="题目 1"></a>题目 1</h2><p><a target="_blank" rel="noopener" href="https://leetcode.com/problems/search-in-rotated-sorted-array/">33. Search in Rotated Sorted Array</a>：</p>
+<p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-5%EF%BC%9ASearch-in-Rotated-Sorted-Array/Pasted%20image%2020230402150142.png"></p>
+<p>算法思路是这样子的：</p>
+<ol>
+<li>定义 <code>left, right, mid</code> ，计算 <code>mid</code> ，如果 <code>nums[mid] == target</code> ，那么就返回结果。</li>
+<li>否则，我们需要缩小我们的查找空间。如何做呢？我们需要比较 <code>nums[left]</code> , <code>nums[mid]</code> 和 <code>nums[right]</code> 的大小来判断当前的子区间是否是排好序的（即判断 <code>[left, mid]</code> 及 <code>[mid, right]</code> 这两个区间是否是排好序的）：<ul>
+<li>如果 <code>nums[left] &lt;= nums[mid]</code> ，那么说明 <code>[left, mid]</code> 这个子区间是有序的；</li>
+<li>如果 <code>nums[mid] &lt;= nums[right]</code> ，那么说明 <code>[mid, right]</code> 这个子区间是有序的；</li>
+</ul>
+</li>
+<li>在子区间是有序的前提下，我们再来判断 <code>target</code> 是否在该子区间中，以及它和 <code>nums[mid]</code> 的大小关系。<strong>之所以要在有序的子区间内进行比较的原因是，二分查找算法只能使用在排好序的数据集合当中。</strong> 根据 <code>nums[mid]</code> 和 <code>target</code> 的大小关系比较，来移动左端点和右端点，就像寻常的二分查找那样：<ul>
+<li>如果 <code>nums[left] &lt;= nums[mid]</code> ，那么可能存在两种情况：<ol>
+<li><code>nums[left] &lt;= target &amp;&amp; target &lt; nums[mid]</code> ，说明 <code>target</code> 在 <code>[left, mid]</code> 这个区间内，我们只需要将 <code>right</code> 左移到 <code>mid - 1</code> 处即可；</li>
+<li>否则，说明 <code>target</code> 不在 <code>[left, mid]</code> 区间内，我们右移 <code>left</code> 节点即可。</li>
+</ol>
+</li>
+<li>如果是右半边子区间是有序的 (即 <code>nums[mid] &lt;= nums[right]</code> )，同样可能存在两种情况：<ol>
+<li><code>nums[mid] &lt; target &amp;&amp; target &lt;= nums[right]</code> ：说明 <code>target</code> 在 <code>[mid, right]</code> 这个区间内，右移 <code>left</code> 左端点；</li>
+<li>否则，说明 <code>target</code> 不在这个区间内，我们左移 <code>right</code> 。</li>
+</ol>
+</li>
+</ul>
+</li>
+<li>重复以上步骤直到找到了 <code>target</code> ，或 <code>left &gt; right</code> 。</li>
+</ol>
+<p>代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">search</span><span class="params">(<span class="type">int</span>[] nums, <span class="type">int</span> target)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">left</span> <span class="operator">=</span> <span class="number">0</span>, right = nums.length - <span class="number">1</span>, mid;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> (left &lt;= right) &#123;</span><br><span class="line">            mid = left + (right - left) / <span class="number">2</span>;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (nums[mid] == target) &#123;</span><br><span class="line">                <span class="keyword">return</span> mid;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (nums[left] &lt;= nums[mid]) &#123;</span><br><span class="line">                <span class="keyword">if</span> (nums[left] &lt;= target &amp;&amp; target &lt; nums[mid]) &#123;</span><br><span class="line">                    right = mid - <span class="number">1</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    left = mid + <span class="number">1</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (nums[mid] &lt; target &amp;&amp; target &lt;= nums[right]) &#123;</span><br><span class="line">                    left = mid + <span class="number">1</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    right = mid - <span class="number">1</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>复杂度分析：</p>
+<ul>
+<li>时间复杂度： <code>O(logN)</code></li>
+<li>空间复杂度： <code>O(1)</code></li>
+</ul>
+<p>笔者认为，这类题目的关键点在于如何在找出可以使用二分查找的子区间上。因为 Rotated Sorted Array 的特性，导致我们无法确定 <code>[left, right]</code> 这个区间是排好序的，因此我们只能去分析更小范围的子区间的情况，也就是 <code>[left, mid]</code> 和 <code>[mid, right]</code> 这两个更小的子区间。一旦我们找到了排好序的区间，那么就可以使用二分查找算法的思想，来缩小搜索范围。</p>
+<h2 id="题目-2"><a href="#题目-2" class="headerlink" title="题目 2"></a>题目 2</h2><p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-5%EF%BC%9ASearch-in-Rotated-Sorted-Array/Pasted%20image%2020230402152506.png"></p>
+<p>这道题目在上一道题目的基础上只有一个不同，那就是 <code>nums</code> 可能存在重复元素，而这将影响我们的算法，举个例子：</p>
+<p><code>int[] nums = new int[]&#123;1, 1, 1, 1, 1, 0, 1, 1, 1, 1&#125;</code></p>
+<p>假设 <code>nums</code> 是这个样子的，我们只需要演算一下我们算法的第一次迭代即可看出问题：</p>
+<ul>
+<li><code>left = 0</code> , <code>right = 9</code> , <code>mid = 0 + (9 - 0) / 2 = 4</code> ；</li>
+<li><code>nums[left] &lt;= nums[mid]</code> ，同时， <code>nums[mid] &lt;= nums[right]</code> ；</li>
+</ul>
+<p>我们发现 <code>nums[mid] &lt;= nums[right]</code> ，那么按照我们之前的想法， <code>[mid, right]</code> 这个子区间应该是排好序的，但是 <code>&#123;1, 0, 1, 1, 1, 1&#125;</code> 却不是一个有序的数组。问题就出在重复元素上。</p>
+<p>解决方法其实也很简单，我们只需要略过这些重复的、影响对我们数组是否有序判断的元素即可，整体算法不变：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">search</span><span class="params">(<span class="type">int</span>[] nums, <span class="type">int</span> target)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">left</span> <span class="operator">=</span> <span class="number">0</span>, right = nums.length - <span class="number">1</span>, mid;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> (left &lt;= right) &#123;</span><br><span class="line">            <span class="keyword">while</span> (left + <span class="number">1</span> &lt;= right &amp;&amp; nums[left + <span class="number">1</span>] == nums[left]) &#123;</span><br><span class="line">                ++left;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">while</span> (right - <span class="number">1</span> &gt;= left &amp;&amp; nums[right - <span class="number">1</span>] == nums[right]) &#123;</span><br><span class="line">                --right;</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            mid = left + (right - left) / <span class="number">2</span>;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (nums[mid] == target) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (nums[left] &lt;= nums[mid]) &#123;</span><br><span class="line">                <span class="keyword">if</span> (nums[left] &lt;= target &amp;&amp; target &lt; nums[mid]) &#123;</span><br><span class="line">                    right = mid - <span class="number">1</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    left = mid + <span class="number">1</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (nums[mid] &lt; target &amp;&amp; target &lt;= nums[right]) &#123;</span><br><span class="line">                    left = mid + <span class="number">1</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    right = mid - <span class="number">1</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这两道题都是笔者之前博客 <a href="https://caffcen.github.io/2023/03/12/LeetCode-%E7%AC%94%E8%AE%B0-4%EF%BC%9ABinary-Search-%E7%9A%845%E7%A7%8D%E5%8F%98%E4%BD%93%E5%BA%94%E7%94%A8/">LeetCode 笔记 4：Binary Search 的5种变体应用 | caffcen’s blog</a> 中提到的二分查找的第一种应用 Contains（即用二分查找判断排序数组是否包含目标）。</p>
+<h1 id="Search-the-Minimum-in-Rotated-Sorted-Array"><a href="#Search-the-Minimum-in-Rotated-Sorted-Array" class="headerlink" title="Search the Minimum in Rotated Sorted Array"></a>Search the Minimum in Rotated Sorted Array</h1><h2 id="题目-1-1"><a href="#题目-1-1" class="headerlink" title="题目 1"></a>题目 1</h2><p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-5%EF%BC%9ASearch-in-Rotated-Sorted-Array/Pasted%20image%2020230402153454.png"></p>
+<p>这道题目和之前题目的区别在于，之前题目给出了 <code>target</code> ，而这两个题目的 <code>target</code> 是 <code>nums</code> 中最小的元素。解决方法也很简单，只需要用到我们开篇提到的 rotated sorted array 的一个特性即可：</p>
+<blockquote>
+<p>Rotated sorted array 的第一个子区间的最小值，大于第二个子区间的所有值。</p>
+</blockquote>
+<p>既然第一个子区间的最小值都大于第二个子区间的所有值，那么整个 <code>nums</code> 中的最小值就是第二个子区间的第一个值了。那么目标就是去寻找第二个子区间的第一个值。</p>
+<p>那么如何去寻找这个值呢？其实很简单，我们只需要做一定的转换即可：根据 rotated sorted array 的特性我们知道，第一个子区间的所有值均大于第二个子区间的所有值，那么我们二分查找时定义的右端点，一定小于左端点，即 <code>nums[left] &lt; nums[right]</code> ，同时，第一个子区间中的所有值均大于 <code>nums[right]</code> ，它们也都不是我们要找的解。而题目的解即<strong>第一个</strong>值小于 <code>nums[right]</code> 的元素。</p>
+<p>为了更好理解，我们定义这样一个有序集合 <code>S = [a1, a2, a3, ..., an]</code> ，同时 <code>S</code> 中的元素 <code>a</code> 表示 <code>nums</code> 的下标，且 <code>a1 &lt; a2 &lt; a3 &lt; ... &lt; an</code> 。同时，它们都满足 <code>nums[a] &lt; nums[right]</code> 这一要求，也就是说 <code>S</code> 是一个合法的解集。那么，『求 <code>nums</code> 最小元素』这个问题，就可以转换成『求 <code>S</code> 这一解集中的第一个元素』这样一个问题。</p>
+<p>经过这么一转换，可以看出这道题目和 <a href="https://caffcen.github.io/2023/03/12/LeetCode-%E7%AC%94%E8%AE%B0-4%EF%BC%9ABinary-Search-%E7%9A%845%E7%A7%8D%E5%8F%98%E4%BD%93%E5%BA%94%E7%94%A8/">LeetCode 笔记 4：Binary Search 的5种变体应用 | caffcen’s blog</a> 中的 <em>Index of least element greater than (or equal) to key</em>，<em>最小的大于（或大于等于）目标的下标</em>算法有异曲同工之妙：它们都是使用二分查找去求解集的第一个元素。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">findMin</span><span class="params">(<span class="type">int</span>[] nums)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">left</span> <span class="operator">=</span> <span class="number">0</span>, right = nums.length - <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">while</span> (left &lt; right) &#123;</span><br><span class="line">            <span class="type">int</span> <span class="variable">mid</span> <span class="operator">=</span> left + (right - left) / <span class="number">2</span>;</span><br><span class="line">            <span class="keyword">if</span> (nums[mid] &gt; nums[right]) &#123;</span><br><span class="line">                left = mid + <span class="number">1</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                right = mid;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> nums[left];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="题目-2-1"><a href="#题目-2-1" class="headerlink" title="题目 2"></a>题目 2</h2><p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-5%EF%BC%9ASearch-in-Rotated-Sorted-Array/Pasted%20image%2020230402153504.png"></p>
+<p>算法和上一题几乎一样，只是多了过滤重复元素的步骤，因此不再做过多赘述：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">findMin</span><span class="params">(<span class="type">int</span>[] nums)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">left</span> <span class="operator">=</span> <span class="number">0</span>, right = nums.length - <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">while</span> (left &lt; right) &#123;</span><br><span class="line">            <span class="keyword">while</span> (left + <span class="number">1</span> &lt; right &amp;&amp; nums[left + <span class="number">1</span>] == nums[left]) &#123;</span><br><span class="line">                ++left;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">while</span> (right - <span class="number">1</span> &gt; left &amp;&amp; nums[right - <span class="number">1</span>] == nums[right]) &#123;</span><br><span class="line">                --right;</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            <span class="type">int</span> <span class="variable">mid</span> <span class="operator">=</span> left + (right - left) / <span class="number">2</span>;</span><br><span class="line">            <span class="keyword">if</span> (nums[mid] &gt; nums[right]) &#123;</span><br><span class="line">                left = mid + <span class="number">1</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                right = mid;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> nums[left];</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>虽然不好理解，但实际上这两道题目都是用 Binary Search 去求解集中的第一个解，也就是 <a href="https://caffcen.github.io/2023/03/12/LeetCode-%E7%AC%94%E8%AE%B0-4%EF%BC%9ABinary-Search-%E7%9A%845%E7%A7%8D%E5%8F%98%E4%BD%93%E5%BA%94%E7%94%A8/">LeetCode 笔记 4：Binary Search 的5种变体应用 | caffcen’s blog</a> 中的 <strong>Index of least element greater than (or equal) to key，最小的大于（或大于等于）目标的下标</strong> 这一算法。</p>
+<h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><ol>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/search-in-rotated-sorted-array/">33. Search in Rotated Sorted Array</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/search-in-rotated-sorted-array-ii/">81. Search in Rotated Sorted Array II</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/">153. Find Minimum in Rotated Sorted Array</a></li>
+<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/find-minimum-in-rotated-sorted-array-ii/">154. Find Minimum in Rotated Sorted Array II</a></li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
     <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/03/26/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-B-Tree-1/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -170,7 +309,7 @@
               <span class="post-meta-item-text">Posted on</span>
               
 
-              <time title="Created: 2023-03-26 13:56:01 / Modified: 13:57:45" itemprop="dateCreated datePublished" datetime="2023-03-26T13:56:01+08:00">2023-03-26</time>
+              <time title="Created: 2023-03-26 13:56:01 / Modified: 13:59:46" itemprop="dateCreated datePublished" datetime="2023-03-26T13:56:01+08:00">2023-03-26</time>
             </span>
 
           
@@ -462,10 +601,16 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2023-03-12 13:00:48 / Modified: 13:05:30" itemprop="dateCreated datePublished" datetime="2023-03-12T13:00:48+08:00">2023-03-12</time>
+              <time title="Created: 2023-03-12 13:00:48" itemprop="dateCreated datePublished" datetime="2023-03-12T13:00:48+08:00">2023-03-12</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-04-02 15:47:27" itemprop="dateModified" datetime="2023-04-02T15:47:27+08:00">2023-04-02</time>
+              </span>
 
           
 
@@ -481,11 +626,11 @@
           <p>二分查找在算法题目中是十分常见的一类题目，但这类题目往往要求二分查找找出解集中的第一个、最后一个解，这个时候通常的二分查找算法就无法直接套用了。</p>
 <p>本文将列举 5 种二分查找的变体应用，它们分别是：</p>
 <ol>
-<li>是否包含目标</li>
-<li>目标第一次出现的下标</li>
-<li>目标最后一次出现的下标</li>
-<li>最小的大于（或大于等于）目标的下标</li>
-<li>最大的小于（或小于等于）目标的下标</li>
+<li>Contains，是否包含目标</li>
+<li>Index of first occurrence of a key，目标第一次出现的下标</li>
+<li>Index of last occurrence of a key，目标最后一次出现的下标</li>
+<li>Index of least element greater than (or equal) to key，最小的大于（或大于等于）目标的下标</li>
+<li>Index of greatest element less than (or equal to) key，最大的小于（或小于等于）目标的下标</li>
 </ol>
 <p>之后会更新几篇文章针对不同类型的题目进行分析。</p>
 <p>这 5 中变体算法的代码如下：</p>
@@ -1484,132 +1629,11 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
-    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/01/08/LeetCode-%E7%AC%94%E8%AE%B0-1%EF%BC%9ASliding-Window-%E9%A2%98%E7%9B%AE%E6%80%BB%E7%BB%93/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="caffcen">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="caffcen's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/01/08/LeetCode-%E7%AC%94%E8%AE%B0-1%EF%BC%9ASliding-Window-%E9%A2%98%E7%9B%AE%E6%80%BB%E7%BB%93/" class="post-title-link" itemprop="url">LeetCode 笔记 1：Sliding Window 题目总结</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2023-01-08 16:58:18" itemprop="dateCreated datePublished" datetime="2023-01-08T16:58:18+08:00">2023-01-08</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-26 15:52:25" itemprop="dateModified" datetime="2023-02-26T15:52:25+08:00">2023-02-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="什么是滑动窗口算法"><a href="#什么是滑动窗口算法" class="headerlink" title="什么是滑动窗口算法"></a>什么是滑动窗口算法</h1><p>先用一个简单的<a target="_blank" rel="noopener" href="https://leetcode.com/problems/minimum-size-subarray-sum/">题目</a>来说明什么是滑动窗口算法。</p>
-<p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-1%EF%BC%9ASliding-Window-%E9%A2%98%E7%9B%AE%E6%80%BB%E7%BB%93/Pasted%20image%2020230108160856.png"></p>
-<p>最直接的思路就是，对于每个给定的 index，计算出从该 index 开始的一个最小 subarray，其和大于 <code>target</code>:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="variable">minLength</span> <span class="operator">=</span> Integer.MAX_VALUE;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; nums.length; ++i) &#123;</span><br><span class="line">    <span class="type">int</span> <span class="variable">sum</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">j</span> <span class="operator">=</span> i; j &lt; nums.length; ++j) &#123;</span><br><span class="line">        sum += nums[j];</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (sum &gt; target) &#123;</span><br><span class="line">            minLength = Math.min(minLength, j - i + <span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>这个算法的问题就在于，相邻的 index 之间，存在着重合的计算。</p>
-<p>解决办法就是维护一个滑动窗口，这样就能够解决重复计算的问题了：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">minSubArrayLen</span><span class="params">(<span class="type">int</span> target, <span class="type">int</span>[] nums)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">res</span> <span class="operator">=</span> Integer.MAX_VALUE, sum = <span class="number">0</span>, windowStart = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">windowEnd</span> <span class="operator">=</span> <span class="number">0</span>; windowEnd &lt; nums.length; ++windowEnd) &#123;</span><br><span class="line">            sum += nums[windowEnd];</span><br><span class="line"></span><br><span class="line">            <span class="keyword">while</span> (sum &gt;= target) &#123;</span><br><span class="line">                res = Math.min(res, windowEnd - windowStart + <span class="number">1</span>);</span><br><span class="line">                sum -= nums[windowStart++];</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> res == Integer.MAX_VALUE ? <span class="number">0</span> : res;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>每次迭代，将滑动窗口的大小扩大 <code>1</code>，并将 <code>nums[windowEnd]</code> 加到子数组和 <code>sum</code> 中。</li>
-<li>当子数组和 <code>sum &gt; target</code> 时，更新结果</li>
-<li>因为当前子数组和已经比 <code>target</code> 大，为求得最优解，我们缩小滑动窗口大小：将滑动窗口的左端的值 <code>nums[windowStart]</code> 从 <code>sum</code> 中减去，并将窗口左端点下标加一</li>
-</ul>
-<p>总的来说，滑动窗口算法是基于迭代的算法，其使用包括如下步骤：</p>
-<ul>
-<li>每次迭代扩大滑动窗口的大小：<code>++windowEnd</code></li>
-<li>更新窗口左端点 <code>windowStart</code>，使窗口范围的数据是满足题目要求的</li>
-<li>更新结果</li>
-</ul>
-<h1 id="使用到-Map-的题目类型"><a href="#使用到-Map-的题目类型" class="headerlink" title="使用到 Map 的题目类型"></a>使用到 Map 的题目类型</h1><p>有些题目需要使用哈希表来记录滑动窗口中数据出现的次数，典型的题目为：<a target="_blank" rel="noopener" href="https://leetcode.com/problems/permutation-in-string/">567. Permutation in String</a></p>
-<p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-1%EF%BC%9ASliding-Window-%E9%A2%98%E7%9B%AE%E6%80%BB%E7%BB%93/Pasted%20image%2020230108163150.png"></p>
-<p>这类题目的思路都很接近：</p>
-<ul>
-<li>用一个 Map（<code>charCntMap</code>） 来存储目标字符串每个字符的频率</li>
-<li>用一个 <code>int</code> （<code>cnt</code>）来存储 Map 的大小（<code>charCntMap.size()</code>），即目标字符串（当前题目是 <code>s1</code>）有多少个不重复的字符</li>
-<li>维护一个滑动窗口，每次扩大窗口大小时，如果当前字符出现在 Map 中，将其频率减一</li>
-<li>当该字符的频率变为 0 时，将 <code>cnt</code> 减一；当 <code>cnt == 0</code> 时，说明目标数组所有字符已经出现在了当前的滑动窗口中，这时更新结果（该题目返回 <code>true</code>）</li>
-<li>当滑动窗口非法时（该题目是<code>窗口大小 &gt; s1.length()</code>），将窗口左端点的 <code>index</code> 加一（<code>windowStart + 1</code>）；同时：<ul>
-<li>如果 Map 存储的该字符出现的频率为 0，则 <code>++cnt</code>，这表明了当前的滑动窗口无法存储目标字符串（<code>s1</code>）所有的字符了</li>
-<li>将 Map 存储的该字符的频率加一</li>
-</ul>
-</li>
-</ul>
-<p>Java 实现：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">checkInclusion</span><span class="params">(String s1, String s2)</span> &#123;</span><br><span class="line">        Map&lt;Character, Integer&gt; charCntMap = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="type">char</span> ch : s1.toCharArray()) &#123;</span><br><span class="line">            charCntMap.put(ch, charCntMap.getOrDefault(ch, <span class="number">0</span>) + <span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="type">int</span> <span class="variable">windowStart</span> <span class="operator">=</span> <span class="number">0</span>, cnt = charCntMap.size();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">windowEnd</span> <span class="operator">=</span> <span class="number">0</span>; windowEnd &lt; s2.length(); ++windowEnd) &#123;</span><br><span class="line">            <span class="type">char</span> <span class="variable">ch</span> <span class="operator">=</span> s2.charAt(windowEnd);</span><br><span class="line">            <span class="keyword">if</span> (charCntMap.containsKey(ch)) &#123;</span><br><span class="line">                charCntMap.put(ch, charCntMap.get(ch) - <span class="number">1</span>);</span><br><span class="line">                <span class="keyword">if</span> (charCntMap.get(ch) == <span class="number">0</span>) &#123;</span><br><span class="line">                    --cnt;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (windowEnd - windowStart + <span class="number">1</span> &gt; s1.length()) &#123;</span><br><span class="line">                ch = s2.charAt(windowStart++);</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (charCntMap.containsKey(ch)) &#123;</span><br><span class="line">                    charCntMap.put(ch, charCntMap.get(ch) + <span class="number">1</span>);</span><br><span class="line">                    <span class="keyword">if</span> (charCntMap.get(ch) == <span class="number">1</span>) &#123;</span><br><span class="line">                        ++cnt;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (cnt == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>类似的题目有：</p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/contains-duplicate-ii/">219. Contains Duplicate II</a></li>
-<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/fruit-into-baskets/">904. Fruit Into Baskets</a></li>
-</ul>
-<h1 id="使用到-Set-的题目类型"><a href="#使用到-Set-的题目类型" class="headerlink" title="使用到 Set 的题目类型"></a>使用到 Set 的题目类型</h1><p>滑动窗口算法有些时候需要配合 HashSet 使用，如 <a target="_blank" rel="noopener" href="https://leetcode.com/problems/longest-substring-without-repeating-characters/">3. Longest Substring Without Repeating Characters</a>:</p>
-<p><img src="/images/LeetCode-%E7%AC%94%E8%AE%B0-1%EF%BC%9ASliding-Window-%E9%A2%98%E7%9B%AE%E6%80%BB%E7%BB%93/Pasted%20image%2020230108165249.png"></p>
-<p>思路为：</p>
-<ul>
-<li>维护一个 <code>Set</code> 来存储出现在滑动窗口中的元素</li>
-<li>维护一个滑动窗口，每次迭代的时候检查当前的滑动窗口是否合法，即检查 <code>Set</code> 是否有保存窗口右端点对应的元素；窗口非法则说明当前窗口过大，需要缩小窗口大小</li>
-<li>窗口合法时更新结果值</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">lengthOfLongestSubstring</span><span class="params">(String s)</span> &#123;</span><br><span class="line">        <span class="type">int</span> <span class="variable">res</span> <span class="operator">=</span> <span class="number">0</span>, windowStart = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">        Set&lt;Character&gt; set = <span class="keyword">new</span> <span class="title class_">HashSet</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">windowEnd</span> <span class="operator">=</span> <span class="number">0</span>; windowEnd &lt; s.length(); ++windowEnd) &#123;</span><br><span class="line">            <span class="type">char</span> <span class="variable">ch</span> <span class="operator">=</span> s.charAt(windowEnd);</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (set.contains(ch)) &#123;</span><br><span class="line">                <span class="keyword">while</span> (set.contains(ch)) &#123;</span><br><span class="line">                    set.remove(s.charAt(windowStart++));</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">             set.add(ch);</span><br><span class="line">             res = Math.max(res, windowEnd - windowStart + <span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h1 id="其他典型-Sliding-window-题目"><a href="#其他典型-Sliding-window-题目" class="headerlink" title="其他典型 Sliding window 题目"></a>其他典型 Sliding window 题目</h1><ul>
-<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/longest-repeating-character-replacement/">424. Longest Repeating Character Replacement</a></li>
-<li><a href="">643. Maximum Average Subarray I</a></li>
-<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/longest-mountain-in-array/">845. Longest Mountain in Array</a></li>
-<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/max-consecutive-ones-iii/">1004. Max Consecutive Ones III</a></li>
-<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/grumpy-bookstore-owner/">1052. Grumpy Bookstore Owner</a></li>
-<li><a target="_blank" rel="noopener" href="https://leetcode.com/problems/minimum-operations-to-reduce-x-to-zero/">1658. Minimum Operations to Reduce X to Zero</a></li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
+  <nav class="pagination">
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
+  </nav>
 
 
 
@@ -1674,7 +1698,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-count">11</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
