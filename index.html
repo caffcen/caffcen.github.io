@@ -145,6 +145,132 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/04/09/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-CLH-Queue-Lock/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="caffcen">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="caffcen's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/04/09/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-CLH-Queue-Lock/" class="post-title-link" itemprop="url">深入理解 CLH Queue Lock</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-04-09 16:04:06 / Modified: 16:05:20" itemprop="dateCreated datePublished" datetime="2023-04-09T16:04:06+08:00">2023-04-09</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>JUC 包中的很多同步原语是基于 AbstractQueuedSynchronizer（以下简称 AQS） 实现的，而 AQS 的实现又是基于 CLH 队列锁（CLH queued lock），因此学习并理解 CLH 队列锁对我们学习 JUC 中的各种同步原语非常有帮助。本文将阐述 CLH 队列锁的实现和原理。</p>
+<h1 id="CLH-Queue-Lock"><a href="#CLH-Queue-Lock" class="headerlink" title="CLH Queue Lock"></a>CLH Queue Lock</h1><p>CLH 队列锁是由 Craig, Landin, Hagersten 三位大佬提出的，因此被称为 CLH 队列锁，它是一种自旋公平锁，基于虚链表实现（virtual linked list）。</p>
+<p>《The Art of Multiprocessor Programming》7.5.2 节给出了 CLH 可能的一种 Java 语言实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CLHLock</span> <span class="keyword">implements</span> <span class="title class_">Lock</span> &#123;</span><br><span class="line"></span><br><span class="line">    AtomicReference&lt;QNode&gt; tail;</span><br><span class="line">    ThreadLocal&lt;QNode&gt; myPred;</span><br><span class="line">    ThreadLocal&lt;QNode&gt; myNode;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">CLHLock</span><span class="params">()</span> &#123;</span><br><span class="line">        tail = <span class="keyword">new</span> <span class="title class_">AtomicReference</span>&lt;QNode&gt;(<span class="keyword">new</span> <span class="title class_">QNode</span>());</span><br><span class="line"></span><br><span class="line">        myNode = <span class="keyword">new</span> <span class="title class_">ThreadLocal</span>&lt;QNode&gt;() &#123;</span><br><span class="line">            <span class="keyword">protected</span> QNode <span class="title function_">initialValue</span><span class="params">()</span> &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">QNode</span>();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        myPred = <span class="keyword">new</span> <span class="title class_">ThreadLocal</span>&lt;QNode&gt;() &#123;</span><br><span class="line">            <span class="keyword">protected</span> QNode <span class="title function_">initialValue</span><span class="params">()</span> &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">lock</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">QNode</span> <span class="variable">qnode</span> <span class="operator">=</span> myNode.get();</span><br><span class="line">        qnode.locked = <span class="literal">true</span>;</span><br><span class="line">        <span class="type">QNode</span> <span class="variable">pred</span> <span class="operator">=</span> tail.getAndSet(qnode);</span><br><span class="line">        myPred.set(pred);</span><br><span class="line">        <span class="keyword">while</span> (pred.locked) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">unlock</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">QNode</span> <span class="variable">qnode</span> <span class="operator">=</span> myNode.get();</span><br><span class="line">        qnode.locked = <span class="literal">false</span>;</span><br><span class="line">        myNode.set(myPred.get());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">class</span> <span class="title class_">QNode</span> &#123;</span><br><span class="line">        <span class="keyword">volatile</span> <span class="type">boolean</span> <span class="variable">locked</span> <span class="operator">=</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>接下来将会对源码以及其中各个关键技术进行分析。</p>
+<h2 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h2><h3 id="QNode"><a href="#QNode" class="headerlink" title="QNode"></a>QNode</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">QNode</span> &#123;</span><br><span class="line">    <span class="keyword">volatile</span> <span class="type">boolean</span> <span class="variable">locked</span> <span class="operator">=</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><code>QNode</code> 记录一个线程的同步状态，它只有一个实例字段 <code>locked</code> ，其含义为：</p>
+<ul>
+<li><code>true</code> ：表示该线程要么已经拿到了锁，要么等待获取锁</li>
+<li><code>false</code> ：表示该线程已经释放了锁。</li>
+</ul>
+<h3 id="Virtual-Linked-List"><a href="#Virtual-Linked-List" class="headerlink" title="Virtual Linked List"></a>Virtual Linked List</h3><p><code>CLHLock</code> 类中有三个实例字段，共同构成了 CLH 队列锁的虚队列结构：</p>
+<ol>
+<li><code>AtomicReference&lt;QNode&gt; tail</code> ：指向最后加入虚队列的线程节点</li>
+<li><code>ThreadLocal&lt;QNode&gt; myPred</code> ：每个线程独有，指向该线程的前继节点的 <code>QNode</code></li>
+<li><code>ThreadLocal&lt;QNode&gt; myNode</code> ：每个线程独有，指向线程自己的 <code>QNode</code></li>
+</ol>
+<p><code>tail</code> 节点是始终指向虚队列的尾结点，即最后加入队列的线程节点。因其是 <code>AtomicReference</code> 类型，因此对其的操作都可以保证是原子性的，不会造成线程不安全的问题。</p>
+<p>而之所以称 CLH 队列锁的数据结构是一个虚队列，是因为每个线程只能通过 <code>prev</code> 节点访问到它的前继节点，链表结构对我们来说是『隐式』的。</p>
+<blockquote>
+<p>We use the term “virtual” because the list is implicit: Each thread refers to its predecessor through a thread-local pred variable.</p>
+</blockquote>
+<p>CLH 队列是根据线程请求锁的顺序来进行排列的，因此是 First-in-first-out 的，满足公平锁的定义。</p>
+<h2 id="加锁"><a href="#加锁" class="headerlink" title="加锁"></a>加锁</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">lock</span><span class="params">()</span> &#123;</span><br><span class="line">	<span class="comment">// 获取当前线程的 QNode</span></span><br><span class="line">    <span class="type">QNode</span> <span class="variable">qnode</span> <span class="operator">=</span> myNode.get();</span><br><span class="line">    <span class="comment">// 将 myNode.locked 置为 true，表示当前线程想要获取锁</span></span><br><span class="line">    qnode.locked = <span class="literal">true</span>;</span><br><span class="line">    <span class="comment">// 通过 tail 获取队列末尾的线程 QNode</span></span><br><span class="line">    <span class="comment">// 并且更新 tail 节点指向当前线程，CAS 操作保证原子性</span></span><br><span class="line">    <span class="comment">// 现在当前线程排到了队列的末尾</span></span><br><span class="line">    <span class="type">QNode</span> <span class="variable">pred</span> <span class="operator">=</span> tail.getAndSet(qnode);</span><br><span class="line">    <span class="comment">// 设置当前线程的前继节点 myPred</span></span><br><span class="line">    myPred.set(pred);</span><br><span class="line">    <span class="comment">// 在 pred 上忙等待，直到前继节点将其 locked 更新为 flase</span></span><br><span class="line">    <span class="keyword">while</span> (pred.locked) &#123;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>一个线程获取锁的步骤可以总结为：</p>
+<ol>
+<li>将自己的 <code>QNode</code> 状态置为 <code>true</code> ，表示自己想要获取锁。</li>
+<li>将自己加入到虚队列的末尾（即让 <code>tail</code> 指向自己的 <code>QNode</code> ），同时得到自己的前继节点的 <code>QNode</code> ，这是一个原子操作，由 <code>AtomicReference</code> 类型保证。</li>
+<li>在前继节点 <code>myPred</code> 的 <code>QNode</code> 上进行忙等待，直到前继节点释放锁为止。</li>
+</ol>
+<h2 id="解锁"><a href="#解锁" class="headerlink" title="解锁"></a>解锁</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">unlock</span><span class="params">()</span> &#123;</span><br><span class="line">	<span class="comment">// 获取当前线程 QNode</span></span><br><span class="line">    <span class="type">QNode</span> <span class="variable">qnode</span> <span class="operator">=</span> myNode.get();</span><br><span class="line">    <span class="comment">// 将其置为 false，表示当前线程离开临界区，并释放锁</span></span><br><span class="line">    qnode.locked = <span class="literal">false</span>;</span><br><span class="line">    <span class="comment">// 循环利用 QNode，且防止该线程下次加锁时发生死锁</span></span><br><span class="line">    myNode.set(myPred.get());</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>线程解锁的步骤可以总结为：</p>
+<ol>
+<li>获取当前线程的 <code>QNode</code></li>
+<li>将当前线程的 <code>QNode</code> 状态置为 <code>false</code> ，表示当前线程已经处理完临界区的工作，释放锁</li>
+<li>更新 <code>myNode</code> 引用，使其指向一个新的 <code>QNode</code> 对象，防止死锁。</li>
+</ol>
+<h3 id="死锁的可能性以及-QNode-的回收利用"><a href="#死锁的可能性以及-QNode-的回收利用" class="headerlink" title="死锁的可能性以及 QNode 的回收利用"></a>死锁的可能性以及 QNode 的回收利用</h3><p>可能有读者会奇怪这里为什么需要更新 <code>myNode</code> 引用，能不能不更新 <code>myNode</code> 引用，直接从方法调用中返回呢？</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">unlock</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="type">QNode</span> <span class="variable">qnode</span> <span class="operator">=</span> myNode.get();</span><br><span class="line">    qnode.locked = <span class="literal">false</span>;</span><br><span class="line">    <span class="comment">// 不更新 myNode 引用直接返回</span></span><br><span class="line">    <span class="comment">// myNode.set(myPred.get());</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>如果不更新 <code>myNode</code> 对象，那么可能会出现如下的情况：</p>
+<p><img src="/images/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-CLH-Queue-Lock/Pasted%20image%2020230409152218.png"></p>
+<p>假设整个 CLH 队列中只有一个线程，它能够立刻获得锁（因为没有前继节点持有锁）并进入临界区。它在执行完临界区工作后释放了锁，将自己的 <code>QNode</code> 置为 <code>flase</code> ，那么将变成下图的情况：</p>
+<p><img src="/images/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-CLH-Queue-Lock/Pasted%20image%2020230409152556.png"></p>
+<p>之后，该线程立刻再次尝试获取锁，这个时候，CLH 队列的情况和上图是一致的，因为我们在解锁时没有更新 <code>myNode</code> 引用，那么 <code>tail</code> 节点和该线程的 <code>myNode</code> 节点指向的是同一个内存对象。那么考虑该线程重新尝试加锁时会发生什么：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">lock</span><span class="params">()</span> &#123;</span><br><span class="line">	<span class="comment">// qnode 即为上次加锁、解锁中使用的 QNode 数据结构</span></span><br><span class="line">    <span class="type">QNode</span> <span class="variable">qnode</span> <span class="operator">=</span> myNode.get();</span><br><span class="line">    <span class="comment">// 将 myNode.locked 置为 true</span></span><br><span class="line">    qnode.locked = <span class="literal">true</span>;</span><br><span class="line">    <span class="comment">// 通过 tail 获取队列末尾的线程 QNode，tail 此时指向的对象既为该线程自己的 myNode</span></span><br><span class="line">    <span class="comment">// 也就是上上条语句 QNode qnode = myNode.get(); 拿到的 QNode 引用</span></span><br><span class="line">    <span class="type">QNode</span> <span class="variable">pred</span> <span class="operator">=</span> tail.getAndSet(qnode);</span><br><span class="line">    <span class="comment">// 设置当前线程的前继节点 myPred，这个时候 myPred 指向了 myNode</span></span><br><span class="line">    <span class="comment">// 也就是说该线程的前继线程是自己，明显是错误的</span></span><br><span class="line">    myPred.set(pred);</span><br><span class="line">    <span class="comment">// pred.locked == myNode.locked &amp;&amp; myNode.locked == true，死锁</span></span><br><span class="line">    <span class="keyword">while</span> (pred.locked) &#123;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>通过注释可以清晰地看到，因为 <code>tail</code> 指向了想要重新获取锁的这条线程，那么这个线程的 <code>myNode</code> 和 <code>myPred</code> 将指向同一个对象，最终将永远忙等待下去。这也就是为什么我们需要在解锁时更新 <code>myNode</code> 的原因，这是为了让同一个线程再次加锁时不发生死锁而必要的一个操作。</p>
+<p>而《The Art of Multiprocessor Programming》的实现中是将 <code>myPred</code> 直接赋值给了 <code>myNode</code> ，这是因为前继节点对应的线程已经离开了临界区，自然它的 <code>QNode</code> 就不会再被使用了，这里循环使用了内存中的对象。其实也可以重新实例化一个新的 <code>QNode</code> 并赋值给 <code>myNode</code> 也是可以的。《The Art of Multiprocessor Programming》的一条脚注说明了这一点：</p>
+<blockquote>
+<p>There is no need to reuse nodes in garbage-collected languages such as Java or C#, but reuse would be needed in languages such as C++ or C.</p>
+</blockquote>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>CLH 队列锁通过一个虚队列来维护想要获取锁的线程，每当一个线程想要获取锁时，CLH 将其放到队列的末尾，并让其获得它的前继节点（即排在它前面的线程）的 <code>QNode</code> 引用。一个线程通过在它的前继节点的 <code>QNode</code> 状态上进行自旋，判断它能否获取到锁。</p>
+<p>CLH 队列锁的缺点是它在无缓存的 NUMA 架构机器上性能并不好。因为每个线程都自旋在另一个线程的 <code>QNode</code> 状态上，而另一个线程的 <code>QNode</code> 状态对象可能存放在另一个 CPU 的本地内存中，这将导致这种自旋操作将变得很慢。如果是在 SMP 架构的机器上，因为内存读取的开销是统一的，因此该算法的性能就很好。</p>
+<blockquote>
+<p>Perhaps the only disadvantage of this lock algorithm is that it performs poorly on cacheless NUMA architectures. Each thread spins waiting for its predecessor’s node’s <code>locked</code> ﬁeld to become <code>false</code>. If this memory location is remote, then performance suffers. On cache-coherent architectures, however, this approach should work well.</p>
+</blockquote>
+<h1 id="Referece"><a href="#Referece" class="headerlink" title="Referece"></a>Referece</h1><ol>
+<li>The Art of Multiprocessor Programming 7.5.2</li>
+<li><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/43628187/why-clh-lock-need-prev-node-in-java">multithreading - Why CLH Lock need prev-Node in java - Stack Overflow</a></li>
+<li><a target="_blank" rel="noopener" href="https://juejin.cn/post/6864210697292054541">AQS基础——多图详解CLH锁的原理与实现 - 掘金</a></li>
+<li><a target="_blank" rel="noopener" href="https://juejin.cn/post/6981431787746492447">🏆【数据结构之旅】「线程锁算法专项」引领你走进CLH队列锁机制原理世界 - 掘金</a></li>
+<li><a target="_blank" rel="noopener" href="https://gee.cs.oswego.edu/dl/papers/aqs.pdf">https://gee.cs.oswego.edu/dl/papers/aqs.pdf</a></li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
     <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/04/02/LeetCode-%E7%AC%94%E8%AE%B0-5%EF%BC%9ASearch-in-Rotated-Sorted-Array/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1513,122 +1639,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
-    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/02/04/CAP-%E7%90%86%E8%AE%BA%E5%92%8C-PACELC-%E7%90%86%E8%AE%BA/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="caffcen">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="caffcen's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/02/04/CAP-%E7%90%86%E8%AE%BA%E5%92%8C-PACELC-%E7%90%86%E8%AE%BA/" class="post-title-link" itemprop="url">CAP 理论和 PACELC 理论</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2023-02-04 15:57:20" itemprop="dateCreated datePublished" datetime="2023-02-04T15:57:20+08:00">2023-02-04</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-03-18 16:20:43" itemprop="dateModified" datetime="2023-03-18T16:20:43+08:00">2023-03-18</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="CAP-理论"><a href="#CAP-理论" class="headerlink" title="CAP 理论"></a>CAP 理论</h1><p>CAP 理论阐述的是，一个分布式系统不可能同时满足<strong>一致性</strong>（consistency）、<strong>可用性</strong>（availability）和<strong>分区容错性</strong>（partition tolerance）这 3 个特性，至多只能满足其中的两个，实际上要么满足 CP（一致性+分区容错性），要么满足 AP（可用性+分区容错性）。</p>
-<h2 id="一致性-consistency"><a href="#一致性-consistency" class="headerlink" title="一致性 consistency"></a>一致性 consistency</h2><p>读请求（read request）总是能得到最新的值，也就是说，在任何时间，分布式系统中所有节点对于任一一个值存储的都是相同版本。这便是一致性。</p>
-<h2 id="可用性-availability"><a href="#可用性-availability" class="headerlink" title="可用性 availability"></a>可用性 availability</h2><p>可用性意思是，每一个请求都能够收到非异常返回，但并不保证请求拿到的值就是最新的值。</p>
-<h2 id="分区容错性-partition-tolerance"><a href="#分区容错性-partition-tolerance" class="headerlink" title="分区容错性 partition tolerance"></a>分区容错性 partition tolerance</h2><p>分区（partition）意味着分布式系统的任意一对节点出现了通讯中断。而分区容错性则要求，即便在内部节点出现故障时，整个系统依然能够运行，部分节点之间的网络异常不会导致整个系统的失效。</p>
-<h2 id="分区容错的必要性"><a href="#分区容错的必要性" class="headerlink" title="分区容错的必要性"></a>分区容错的必要性</h2><p>分区容错性是一个分布式系统不可或缺的特性，因为任何系统的任意节点之间都有可能出现网络故障。当一个系统出现分区，部分内部节点无法访问彼此的时候，必须要在一致性和可用性之间做出选择：是为了保障服务依然可用而损害一致性呢，又或者是保障一致性而拒绝服务？</p>
-<p><img src="/images/CAP-%E7%90%86%E8%AE%BA%E5%92%8C-PACELC-%E7%90%86%E8%AE%BA/Drawing%202023-02-04%2015.26.25.excalidraw.png"></p>
-<p>举个例子，考虑上图的情况，假设有两个节点 A 和 B 之间发生了分区的情况，当用户先向节点 B 给 X 变量写一个值后，从节点 A 读取 X 变量，那么系统面临着两个选择：</p>
-<ul>
-<li>它可以选择其中一个请求返回失败，但这样就损害了可用性</li>
-<li>它可以处理两个请求，但是针对读请求返回一个旧的值，但这样就破坏了一致性</li>
-</ul>
-<p>因此，我们能够得出结论：</p>
-<blockquote>
-<p>实际上，CAP 理论要求一个分布式系统在内部节点发生网络故障，分区错误发生时，要么选择保留一致性，要么选择维护可用性。</p>
-</blockquote>
-<h1 id="PACELC-理论"><a href="#PACELC-理论" class="headerlink" title="PACELC 理论"></a>PACELC 理论</h1><p>PACELC 理论是 CAP 理论的补充，以下这段文字摘抄自维基百科 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/PACELC_theorem">PACELC theorem - Wikipedia</a>，它指出了 PACELC 这几个字母的缩写是怎么来的：</p>
-<blockquote>
-<p>In <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Theoretical_computer_science" title="Theoretical computer science">theoretical computer science</a>, the <strong>PACELC theorem</strong> is an extension to the <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/CAP_theorem" title="CAP theorem">CAP theorem</a>. It states that in case of network partitioning (P) in a distributed computer system, one has to choose between availability (A) and consistency (C) (as per the CAP theorem), but else (E), even when the system is running normally in the absence of partitions, one has to choose between latency (L) and consistency (C).</p>
-</blockquote>
-<p>一个分布式系统也不会一直面临着分区网络故障，当内部节点之间不存在通讯问题时，一致性和可用性都是可以得到保证的，特别是可用性基本不会出现问题。</p>
-<p>不过，为了保证一致性，数据在节点之间进行复制时会需要一定的时间，这部分复制时间可能会给用户请求带来不小的延迟，因此，在一致性和延迟（latency）之间有存在利弊权衡：</p>
-<ol>
-<li>系统可以牺牲一致性，不等待值在所有节点写入完成；或者</li>
-<li>保证强一致性，但请求需要等待值在各个节点完成写入后才能够收到返回</li>
-</ol>
-<h2 id="基于-PACELC-理论的系统分类"><a href="#基于-PACELC-理论的系统分类" class="headerlink" title="基于 PACELC 理论的系统分类"></a>基于 PACELC 理论的系统分类</h2><p>我们可以根据系统是否发生了分区错误、分区错误发生时选择维持哪种特性（C 或 A），以及未发生分区错误时系统是否想要保持强一致性，来给分布式系统做如下 4 种分类：</p>
-<table>
-<thead>
-<tr>
-<th>分区错误发生时</th>
-<th>系统没有分区错误</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>AP</td>
-<td>EL</td>
-</tr>
-<tr>
-<td>AP</td>
-<td>EC</td>
-</tr>
-<tr>
-<td>CP</td>
-<td>EL</td>
-</tr>
-<tr>
-<td>CP</td>
-<td>EC</td>
-</tr>
-</tbody></table>
-<p>其中的 E 表示 else，举例来说，AP&#x2F;EL 系统在分区错误发生时希望维持系统的可用性，除此之外也就是内部节点没有网络故障时，希望保持低延迟。</p>
-<p>一般来说，一个系统要么希望是高可用、低延迟的，要么总是要求强一致性，因此大多数系统都落到了 AP&#x2F;EL 或 CP&#x2F;EC 这两个类别之中。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1698,7 +1708,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-count">12</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
