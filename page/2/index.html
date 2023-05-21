@@ -145,6 +145,246 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/02/12/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="caffcen">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="caffcen's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/02/12/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/" class="post-title-link" itemprop="url">本地事务的隔离性是如何实现的</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-02-12 16:47:37" itemprop="dateCreated datePublished" datetime="2023-02-12T16:47:37+08:00">2023-02-12</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-26 14:15:56" itemprop="dateModified" datetime="2023-02-26T14:15:56+08:00">2023-02-26</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>如果没有并发的存在，数据库所有事务总是串行执行的，那么也就不会有临界资源竞争的情况出现，但现实情况是不可能没有并发的存在。</p>
+<p>为了保证并发的正确性，需要通过对数据库资源加锁。本文将首先介绍数据库中的锁，之后会介绍各个隔离级别及其实现方式。</p>
+<h1 id="锁"><a href="#锁" class="headerlink" title="锁"></a>锁</h1><ul>
+<li><strong>写锁</strong>（Write Lock，也叫作排他锁，eXclusive Lock，简写为 X-Lock）：如果数据有加写锁，就只有持有写锁的事务才能对数据进行写入操作，数据加持着写锁时，其他事务不能写入数据，也不能施加读锁。</li>
+<li><strong>读锁</strong>（Read Lock，也叫作共享锁，Shared Lock，简写为 S-Lock）：多个事务可以对同一个数据添加多个读锁，数据被加上读锁后就不能再被加上写锁，所以其他事务不能对该数据进行写入，但仍然可以读取。对于持有读锁的事务，如果该数据只有它自己一个事务加了读锁，允许直接将其升级为写锁，然后写入数据。</li>
+<li><strong>范围锁</strong>（Range Lock）：对于某个范围直接加排他锁，在这个范围内的数据不能被写入。</li>
+</ul>
+<p>特别注意：<strong>写锁禁止其他事务施加读锁，而不是禁止事务读取数据。</strong></p>
+<h2 id="兼容性"><a href="#兼容性" class="headerlink" title="兼容性"></a>兼容性</h2><p>只有读锁和读锁是兼容的，写锁不兼容任何其他锁。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Write Lock (X)</th>
+<th>Read Lock (S)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Write Lock (X)</td>
+<td>不兼容</td>
+<td>不兼容</td>
+</tr>
+<tr>
+<td>Read Lock (S)</td>
+<td>不兼容</td>
+<td>兼容</td>
+</tr>
+</tbody></table>
+<h1 id="事务隔离级别"><a href="#事务隔离级别" class="headerlink" title="事务隔离级别"></a>事务隔离级别</h1><p>事务的隔离性是通过锁的机制来实现的，事务的隔离性越高，并发吞吐量越低，为了让开发人员能够在吞吐量以及隔离性之前取的较好的平衡点，数据库提供了多种隔离性级别。</p>
+<p>从本质上来说，事务在不同隔离级别下的不同表现，来源于不同隔离级别采取的加锁机制的不同。</p>
+<p>下表是事务的 4 个隔离级别，隔离性从上到下依次递减：</p>
+<table>
+<thead>
+<tr>
+<th>隔离级别</th>
+<th>特征</th>
+<th>可能存在的问题</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Serializability</strong>，可串行性</td>
+<td>多个事务并发执行的效果，和串行执行的效果一致。</td>
+<td>无</td>
+</tr>
+<tr>
+<td><strong>Repeatable read</strong>，可重复读</td>
+<td>可重复度保证一个事务读取到的数据，在整个事务执行过程中不会改变。</td>
+<td>幻读</td>
+</tr>
+<tr>
+<td><strong>Read committed</strong>，读已提交</td>
+<td>不允许一个事务读取到其他事务提交的数据。</td>
+<td>幻读、不可重复读</td>
+</tr>
+<tr>
+<td><strong>Read uncommitted</strong>，读未提交</td>
+<td>允许一个事务读取到其他事务未提交的数据。</td>
+<td>幻读、不可重复读、脏读</td>
+</tr>
+</tbody></table>
+<h2 id="Serializability-可串行性"><a href="#Serializability-可串行性" class="headerlink" title="Serializability, 可串行性"></a>Serializability, 可串行性</h2><p>对事务所涉及到的数据加读锁、写锁、范围锁即可实现 <code>Serializability</code> 所要求的隔离性。</p>
+<h2 id="Repeatable-Read-可重复读"><a href="#Repeatable-Read-可重复读" class="headerlink" title="Repeatable Read, 可重复读"></a>Repeatable Read, 可重复读</h2><p><code>可重复读</code> 对事务所涉及的数据加读锁和写锁，且一直持有至事务结束，但不再加范围锁。这就意味着 <code>可重复读</code> 可能会出现幻读（Phantom reads, 可参考下文针对幻读问题的讨论）的问题，比如说：</p>
+<p><img src="/images/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/Pasted%20image%2020230212154319.png"></p>
+<p>事务 T1 在两次查询取得的数据将会不同，这是因为事务 T1 并没有加范围锁，而 T2 在两次查询之间插入了一行新的记录，这是允许的，因为 <code>可重复读</code> 仅仅只会对数据加读锁和写锁。</p>
+<h2 id="Read-Committed-读已提交"><a href="#Read-Committed-读已提交" class="headerlink" title="Read Committed, 读已提交"></a>Read Committed, 读已提交</h2><p><code>读已提交</code> 对事务所涉及的数据将会加写锁和读锁，写锁在被施加后会一直持续到事务结束为止，但是读锁在查询操作结束后将会立即得到释放。</p>
+<p><code>读已提交</code> 除了幻读问题之外，还存在着 <code>不可重复读</code> （Non-repeatable reads, 可参考下文对不可重复读问题的讨论）的问题，举个例子：</p>
+<p><img src="/images/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/Pasted%20image%2020230212155522.png"></p>
+<p>事务 T1 将会读到 T2 对数据的修改，这是因为在 <code>读已提交</code> 隔离级别下，事务不会对数据加贯穿整个事务生命周期的读锁，在 T1 事务第一次查询结束之后，该行记录的写锁就被释放了，T2 也因此能够对改行数据进行写操作。</p>
+<h2 id="Read-Uncommitted-读未提交"><a href="#Read-Uncommitted-读未提交" class="headerlink" title="Read Uncommitted, 读未提交"></a>Read Uncommitted, 读未提交</h2><p><code>读未提交</code> 对事务涉及的数据只加写锁，会一直持续到事务结束，但完全不加读锁。</p>
+<p><code>读未提交</code> 除了有幻读、不可重复读问题之外，还可能面临脏读的问题（Dirty reads，可参考下文对脏读问题的解释），举例如下：</p>
+<p><img src="/images/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/Pasted%20image%2020230212160142.png"></p>
+<p><code>读未提交</code> 完全不加读锁，因此即便 T2 对行数据加了写锁，T1 也能读到 T2 对行数据的修改。</p>
+<p>这里要特别注意，写锁会阻塞任何加写锁或读锁的操作，并不阻塞单纯的读取行为。 <code>读未提交</code> 在查询时不加读锁，因此不会被阻塞。</p>
+<p>假如在 <code>读已提交</code> 的隔离级别下，因为在查询前会先加读锁，而 T2 此时已对该行数据加了写锁，T1 事务的第二次查询将会被阻塞。</p>
+<p>综上所述：</p>
+<ol>
+<li>事务的隔离性是通过锁的机制来实现的。</li>
+<li>事务隔离性的不同本质上是锁机制的不同。</li>
+</ol>
+<h1 id="隔离性问题"><a href="#隔离性问题" class="headerlink" title="隔离性问题"></a>隔离性问题</h1><h2 id="Phantom-Reads-幻读"><a href="#Phantom-Reads-幻读" class="headerlink" title="Phantom Reads, 幻读"></a>Phantom Reads, 幻读</h2><p>幻读是指，当一个事务 A 使用相同的查询条件进行两次范围查询时，在两次查询之间有其他事务插入或者删除了数据，导致事务 A 前后两次查询到的数据不一致。</p>
+<p>From Wikipedia:</p>
+<blockquote>
+<p>A <em>phantom read</em> occurs when a transaction retrieves a set of rows twice and new rows are inserted into or removed from that set by another transaction that is committed in between.</p>
+</blockquote>
+<p><img src="/images/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/Pasted%20image%2020230212161843.png"></p>
+<h2 id="Non-repeatable-Reads-不可重复读"><a href="#Non-repeatable-Reads-不可重复读" class="headerlink" title="Non-repeatable Reads, 不可重复读"></a>Non-repeatable Reads, 不可重复读</h2><p>不可重复读是指，一个事务 A 对某一行查询了两次，因为其他事务在两次查询之间对这一行数据进行了修改，导致事务 A 的两次查询结果不一致。</p>
+<p>From Wikipedia:</p>
+<blockquote>
+<p>A <em>non-repeatable read</em> occurs when a transaction retrieves a row twice and that row is updated by another transaction that is committed in between.</p>
+</blockquote>
+<p><img src="/images/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/Pasted%20image%2020230212162127.png"></p>
+<h2 id="Drity-Reads-脏读"><a href="#Drity-Reads-脏读" class="headerlink" title="Drity Reads, 脏读"></a>Drity Reads, 脏读</h2><p>脏读是指，一个事务读到了另一个事务未提交的修改。</p>
+<p>From Wikipedia:</p>
+<blockquote>
+<p>A <em>dirty read</em> (aka <em>uncommitted dependency</em>) occurs when a transaction retrieves a row that has been updated by another transaction that is not yet committed.</p>
+</blockquote>
+<p><img src="/images/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/Pasted%20image%2020230212162144.png"></p>
+<h2 id="Dirty-Write-脏写"><a href="#Dirty-Write-脏写" class="headerlink" title="Dirty Write, 脏写"></a>Dirty Write, 脏写</h2><p>脏写是指，一个事务覆盖了另一个事务未提交的更新：</p>
+<p><img src="/images/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/Pasted%20image%2020230212162527.png"></p>
+<p>假设事务既不加读锁也不加写锁，那么 T1 对行数据的更新将会被 T2 对该行数据的写操作所覆盖。</p>
+<p>不过，即便是 Read Uncommitted 隔离级别下，也不会出现这种情况。脏写意味着事务的原子性都被破坏了，所以一般不把它纳入隔离性相关问题的讨论范围内。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>下表总结了各个事务隔离级别下可能遇到的问题：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Phantom Reads</th>
+<th>Non-repeatable Reads</th>
+<th>Dirty Reads</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Serializability</td>
+<td>不可能</td>
+<td>不可能</td>
+<td>不可能</td>
+</tr>
+<tr>
+<td>Repeatable Read</td>
+<td>可能</td>
+<td>不可能</td>
+<td>不可能</td>
+</tr>
+<tr>
+<td>Read Committed</td>
+<td>可能</td>
+<td>可能</td>
+<td>不可能</td>
+</tr>
+<tr>
+<td>Read Uncommitted</td>
+<td>可能</td>
+<td>可能</td>
+<td>可能</td>
+</tr>
+</tbody></table>
+<p>下表总结了各个事务隔离级别下对锁的使用情况：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Read Locks</th>
+<th>Write Locks</th>
+<th>Range Locks</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Serializability</td>
+<td>加读锁并持有到事务结束</td>
+<td>加写锁并持有到事务结束</td>
+<td>加范围锁并持有到事务结束</td>
+</tr>
+<tr>
+<td>Repeatable Read</td>
+<td>加读锁并持有到事务结束</td>
+<td>加写锁并持有到事务结束</td>
+<td>不加范围锁</td>
+</tr>
+<tr>
+<td>Read Committed</td>
+<td>加读锁，查询结束后立即释放</td>
+<td>加写锁并持有到事务结束</td>
+<td>不加范围锁</td>
+</tr>
+<tr>
+<td>Read Uncommitted</td>
+<td>不加读锁</td>
+<td>加写锁并持有到事务结束</td>
+<td>不加范围锁</td>
+</tr>
+</tbody></table>
+<h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><ol>
+<li><a target="_blank" rel="noopener" href="http://icyfenix.cn/architect-perspective/general-architecture/transaction/local.html">本地事务 | 凤凰架构</a></li>
+<li>《MySQL 技术内幕——InnoDB 存储引擎》</li>
+<li><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Isolation_(database_systems)">Isolation (database systems) - Wikipedia</a></li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
     <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/02/04/CAP-%E7%90%86%E8%AE%BA%E5%92%8C-PACELC-%E7%90%86%E8%AE%BA/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -450,12 +690,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-count">13</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-count">15</span>
         <span class="site-state-item-name">tags</span>
       </div>
   </nav>
