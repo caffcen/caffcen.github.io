@@ -145,6 +145,132 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
+    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/06/18/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-ReentrantLock/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="caffcen">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="caffcen's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/06/18/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-ReentrantLock/" class="post-title-link" itemprop="url">深入理解 ReentrantLock</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-06-18 15:44:26 / Modified: 15:48:20" itemprop="dateCreated datePublished" datetime="2023-06-18T15:44:26+08:00">2023-06-18</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>本文是对 <code>ReentrantLock</code> 源码的分析以及总结，详细介绍了其是实现公平与非公平锁的加解锁的原理、其与 <code>AbstractQueuedSynchronizer</code> 的关联。</p>
+<h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>可重入锁是 JUC 包中提供的一种可重入的互斥锁，其实现基于 [[AbstractQueuedSynchronizer]] ， Java 源码的注释很好的说明了 <code>ReentrantLock</code> 是什么： <code>ReentrantLock</code> 和 Java <code>synchronized</code> 的语义一致，但包含更多的功能。</p>
+<blockquote>
+<p>A reentrant mutual exclusion Lock with the same basic behavior and semantics as the implicit monitor lock accessed using synchronized methods and statements, but with extended capabilities.</p>
+</blockquote>
+<h1 id="代码结构"><a href="#代码结构" class="headerlink" title="代码结构"></a>代码结构</h1><p>AQS 和其实现类之间的关系属于模板方法：AQS 提供基础的算法框架，实现类实现抽象方法来实现自己独特的功能和语义。 <code>AbstractQueuedSynchronizer</code> 的源码注释中有这么一段话，很好地说明了 AQS 与 JUC 包中具体同步器之间的关系：</p>
+<blockquote>
+<p>Subclasses should be defined as non-public internal helper classes that are used to implement the synchronization properties of their enclosing class. Class AbstractQueuedSynchronizer does not implement any synchronization interface. Instead it defines methods such as acquireInterruptibly that can be invoked as appropriate by concrete locks and related synchronizers to implement their public methods.</p>
+</blockquote>
+<p>有个这样一个前提，我们才能更好地理解 <code>RenentrantLock</code> 的实现和原理。</p>
+<p><code>ReentrantLock</code> 的整体结构如下：</p>
+<ul>
+<li><code>ReentrantLock</code> 实现了 <code>Lock</code> 接口，使用者仅需调用 <code>lock</code> 和 <code>unlock</code> 接口即可实现加解锁。</li>
+<li>抽象内部类 <code>Sync</code> 继承了 <code>AbstractQueuedSynchronizer</code> ， <code>Sync</code> 类实现了不分 AQS 中定义的模板方法，比如 <code>tryRelease</code> 和 <code>isHeldExclusively</code></li>
+<li>为了支持公平锁和非公平锁两种语义， <code>RenentrantLock</code> 内部定义了 <code>FairSync</code> 和 <code>NonfairSync</code> 两个继承自 <code>Sync</code> 的类， <code>FaireSync</code> 和 <code>NonfairSync</code> 实现 AQS 中定义的 <code>tryAcquire</code> 模板方法，实现了公平锁及非公平锁的加锁逻辑。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ReentrantLock</span> <span class="keyword">implements</span> <span class="title class_">Lock</span>, java.io.Serializable &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Sync sync;  <span class="comment">// 同步器变量</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// Sync 继承自 AQS，实现了 AQS 中定义的模板方法</span></span><br><span class="line">    <span class="keyword">abstract</span> <span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">Sync</span> <span class="keyword">extends</span> <span class="title class_">AbstractQueuedSynchronizer</span> &#123;...&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 非公平锁实现类</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">NonfairSync</span> <span class="keyword">extends</span> <span class="title class_">Sync</span> &#123;...&#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 公平锁实现类</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">FairSync</span> <span class="keyword">extends</span> <span class="title class_">Sync</span> &#123;...&#125;</span><br><span class="line">    </span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h1 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h1><h2 id="构造函数"><a href="#构造函数" class="headerlink" title="构造函数"></a>构造函数</h2><p><code>ReentrantLock</code> 在构造函数时可以传入一个不二参数，来生成一个公平锁实例，默认情况下的 <code>ReentrantLock</code> 是非公平锁：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ReentrantLock</span> <span class="keyword">implements</span> <span class="title class_">Lock</span>, java.io.Serializable &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Creates an instance of &#123;<span class="doctag">@code</span> ReentrantLock&#125;.</span></span><br><span class="line"><span class="comment">     * This is equivalent to using &#123;<span class="doctag">@code</span> ReentrantLock(false)&#125;.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">ReentrantLock</span><span class="params">()</span> &#123;</span><br><span class="line">        sync = <span class="keyword">new</span> <span class="title class_">NonfairSync</span>();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Creates an instance of &#123;<span class="doctag">@code</span> ReentrantLock&#125; with the</span></span><br><span class="line"><span class="comment">     * given fairness policy.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> fair &#123;<span class="doctag">@code</span> true&#125; if this lock should use a fair ordering policy</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">ReentrantLock</span><span class="params">(<span class="type">boolean</span> fair)</span> &#123;</span><br><span class="line">        sync = fair ? <span class="keyword">new</span> <span class="title class_">FairSync</span>() : <span class="keyword">new</span> <span class="title class_">NonfairSync</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="非公平锁加锁实现"><a href="#非公平锁加锁实现" class="headerlink" title="非公平锁加锁实现"></a>非公平锁加锁实现</h2><p>非公平锁的加锁过程如下：</p>
+<ol>
+<li>调用 <code>NonfairSync</code> 实现的 <code>lock</code> 方法，该方法将调用 AQS 中的 <code>compareAndSetState</code> ，看能否直接获取锁，如果该方法返回 <code>true</code> 那么线程将设置当前线程为 <code>ReentrantLock</code> 的独占持有者；</li>
+<li>如果 AQS <code>state</code> 状态变量不为 0，则调用 AQS 中的 <code>acquire</code> 方法；</li>
+<li>AQS 的 <code>acquire</code> 会调用实现类的 <code>tryAcquire</code> 方法，也就是 <code>NonfairSync</code> 自己实现的 <code>tryAcquire</code> 方法，该方法会调用 <code>Sync</code> 中定义的 <code>nonfairTryAcquire</code></li>
+<li><code>Sync</code> 中的 <code>nonfairTryAcquire</code> 将尝试原子性地更新 AQS 中的 <code>state</code> 状态变量，这里有两种情况：<ol>
+<li>当前线程是 <code>ReentrantLock</code> 的持有者，那么只需更新 AQS 的 <code>state</code> 状态变量即可，并返回 <code>true</code> 表示成功获取锁;</li>
+<li>如果当前线程不是可重入锁的持有者，则判断当前是否可以获取锁，并尝试原子性更新 AQS 的 <code>state</code> 状态变量，成功则返回 <code>true</code> ，否则返回 <code>false</code></li>
+</ol>
+</li>
+<li>失败后将返回到 AQS 的 <code>acquire</code> 中，将当前线程加入到 AQS 的等待队列里。</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ReentrantLock</span> <span class="keyword">implements</span> <span class="title class_">Lock</span>, java.io.Serializable &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">abstract</span> <span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">Sync</span> <span class="keyword">extends</span> <span class="title class_">AbstractQueuedSynchronizer</span> &#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * Performs non-fair tryLock.  tryAcquire is implemented in</span></span><br><span class="line"><span class="comment">         * subclasses, but both need nonfair try for trylock method.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">final</span> <span class="type">boolean</span> <span class="title function_">nonfairTryAcquire</span><span class="params">(<span class="type">int</span> acquires)</span> &#123;</span><br><span class="line">            <span class="keyword">final</span> <span class="type">Thread</span> <span class="variable">current</span> <span class="operator">=</span> Thread.currentThread();</span><br><span class="line">            <span class="type">int</span> <span class="variable">c</span> <span class="operator">=</span> getState();</span><br><span class="line">            <span class="keyword">if</span> (c == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (compareAndSetState(<span class="number">0</span>, acquires)) &#123;</span><br><span class="line">                    setExclusiveOwnerThread(current);</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span> (current == getExclusiveOwnerThread()) &#123;</span><br><span class="line">                <span class="type">int</span> <span class="variable">nextc</span> <span class="operator">=</span> c + acquires;</span><br><span class="line">                <span class="keyword">if</span> (nextc &lt; <span class="number">0</span>) <span class="comment">// overflow</span></span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">Error</span>(<span class="string">&quot;Maximum lock count exceeded&quot;</span>);</span><br><span class="line">                setState(nextc);</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 非公平锁实现类</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">NonfairSync</span> <span class="keyword">extends</span> <span class="title class_">Sync</span> &#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * Performs lock.  Try immediate barge, backing up to normal</span></span><br><span class="line"><span class="comment">         * acquire on failure.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">void</span> <span class="title function_">lock</span><span class="params">()</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (compareAndSetState(<span class="number">0</span>, <span class="number">1</span>))</span><br><span class="line">                setExclusiveOwnerThread(Thread.currentThread());</span><br><span class="line">            <span class="keyword">else</span></span><br><span class="line">                acquire(<span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">protected</span> <span class="keyword">final</span> <span class="type">boolean</span> <span class="title function_">tryAcquire</span><span class="params">(<span class="type">int</span> acquires)</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> nonfairTryAcquire(acquires);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="公平锁加锁实现"><a href="#公平锁加锁实现" class="headerlink" title="公平锁加锁实现"></a>公平锁加锁实现</h2><p>公平锁加锁过程如下：</p>
+<ol>
+<li>调用 <code>FairSync</code> 的 <code>lock</code> 方法，其会调用 AQS 中的 <code>acquire</code> 方法；</li>
+<li>AQS <code>acquire</code> 方法调用具体实现类，也就是 <code>FairSync</code> 自己的 <code>tryAcquire</code> 方法尝试获取锁；</li>
+<li><code>tryAcuire</code> 首先会判断能否获取锁，也就是判断 AQS <code>state</code> 变量的值：<ol>
+<li>如果为 0，则判断 AQS 的等待队列中是否有已经在排队的线程，有的话则返回 <code>false</code> ，回到 AQS 的 <code>acquire</code> 中进行后续入队操作。</li>
+<li>如果不为 0，那么判断当前所是否是 <code>ReentrantLock</code> 的持有者线程，是则原子性更新 AQS 的 <code>state</code> 变量，否则返回 <code>false</code> ，回到 AQS 的 <code>acquire</code> 中进行后续入队操作。</li>
+</ol>
+</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ReentrantLock</span> <span class="keyword">implements</span> <span class="title class_">Lock</span>, java.io.Serializable &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">FairSync</span> <span class="keyword">extends</span> <span class="title class_">Sync</span> &#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">void</span> <span class="title function_">lock</span><span class="params">()</span> &#123;</span><br><span class="line">            acquire(<span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * Fair version of tryAcquire.  Don&#x27;t grant access unless</span></span><br><span class="line"><span class="comment">         * recursive call or no waiters or is first.</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">protected</span> <span class="keyword">final</span> <span class="type">boolean</span> <span class="title function_">tryAcquire</span><span class="params">(<span class="type">int</span> acquires)</span> &#123;</span><br><span class="line">            <span class="keyword">final</span> <span class="type">Thread</span> <span class="variable">current</span> <span class="operator">=</span> Thread.currentThread();</span><br><span class="line">            <span class="type">int</span> <span class="variable">c</span> <span class="operator">=</span> getState();</span><br><span class="line">            <span class="keyword">if</span> (c == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (!hasQueuedPredecessors() &amp;&amp;</span><br><span class="line">                    compareAndSetState(<span class="number">0</span>, acquires)) &#123;</span><br><span class="line">                    setExclusiveOwnerThread(current);</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span> (current == getExclusiveOwnerThread()) &#123;</span><br><span class="line">                <span class="type">int</span> <span class="variable">nextc</span> <span class="operator">=</span> c + acquires;</span><br><span class="line">                <span class="keyword">if</span> (nextc &lt; <span class="number">0</span>)</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">Error</span>(<span class="string">&quot;Maximum lock count exceeded&quot;</span>);</span><br><span class="line">                setState(nextc);</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="解锁实现"><a href="#解锁实现" class="headerlink" title="解锁实现"></a>解锁实现</h2><p>无论是公平锁还是非公平锁实现，解锁代码逻辑是一样的，因此是由 <code>Sync</code> 类来实现的：</p>
+<ol>
+<li>计算解锁后 <code>state</code> 的变量值 <code>c</code></li>
+<li>防御性判断当前线程是否为 <code>ReentrantLock</code> 的持有者线程，如果不是那么就有问题了，抛异常终止</li>
+<li>判断 <code>c</code> 是否为 0，如果是则原子性地设置可重入锁的持有者线程为 <code>null</code></li>
+<li>原子性更新 AQS 的 <code>state</code></li>
+<li>返回锁是否被释放</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ReentrantLock</span> <span class="keyword">implements</span> <span class="title class_">Lock</span>, java.io.Serializable &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">abstract</span> <span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">Sync</span> <span class="keyword">extends</span> <span class="title class_">AbstractQueuedSynchronizer</span> &#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">protected</span> <span class="keyword">final</span> <span class="type">boolean</span> <span class="title function_">tryRelease</span><span class="params">(<span class="type">int</span> releases)</span> &#123;</span><br><span class="line">            <span class="type">int</span> <span class="variable">c</span> <span class="operator">=</span> getState() - releases;</span><br><span class="line">            <span class="keyword">if</span> (Thread.currentThread() != getExclusiveOwnerThread())</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalMonitorStateException</span>();</span><br><span class="line">            <span class="type">boolean</span> <span class="variable">free</span> <span class="operator">=</span> <span class="literal">false</span>;</span><br><span class="line">            <span class="keyword">if</span> (c == <span class="number">0</span>) &#123;</span><br><span class="line">                free = <span class="literal">true</span>;</span><br><span class="line">                setExclusiveOwnerThread(<span class="literal">null</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            setState(c);</span><br><span class="line">            <span class="keyword">return</span> free;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="可重入性"><a href="#可重入性" class="headerlink" title="可重入性"></a>可重入性</h2><p>从源码可以看出， <code>ReentrantLock</code> 的可重入性，来源于加锁时对 AQS <code>state</code> 变量值的判断：如果 <code>state</code> 值不为 0，则判断当前线程是否为锁的持有线程，如果是，则直接原子性的将 <code>state</code> 的值加一。</p>
+<p>解锁时， <code>unlock</code> 方法调用 <code>Sync</code> 内的 <code>tryRelease</code> 方法，原子性的将 AQS 中的 <code>state</code> 值减一，如果 <code>state</code> 变为 0，则将 <code>ReentrantLock</code> 的持有者线程设为 <code>null</code> 。</p>
+<p>这也就要求 <code>ReentrantLock</code> 的加锁和解锁必须是成对出现和匹配的，否则，因为少调用了 <code>tryRelease</code> 方法，AQS 的 <code>state</code> 不为 0，将导致排队的线程永远也无法获取锁。正如源码注释说的那样， <code>ReentrantLock</code> 的最佳实践：</p>
+<blockquote>
+<p>It is recommended practice to always immediately follow a call to lock with a try block, most typically in a before&#x2F;after construction such as:</p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"> <span class="keyword">class</span> <span class="title class_">X</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="type">ReentrantLock</span> <span class="variable">lock</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ReentrantLock</span> ();</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">m</span> <span class="params">()</span> &#123;</span><br><span class="line">        lock. lock ();  <span class="comment">// block until condition holds</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// ... method body</span></span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            lock. unlock ()</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><ol>
+<li>Juc 源码</li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
     <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/05/21/AbstractQueuedSynchronizer-%E7%AE%80%E4%BB%8B/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -176,7 +302,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-06-18 14:02:12" itemprop="dateModified" datetime="2023-06-18T14:02:12+08:00">2023-06-18</time>
+                <time title="Modified: 2023-06-18 15:49:58" itemprop="dateModified" datetime="2023-06-18T15:49:58+08:00">2023-06-18</time>
               </span>
 
           
@@ -190,7 +316,8 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>AQS 提供了实现同步阻塞队列的基本框架，是 juc 包中其他众多同步原语和锁实现的基础。</p>
+          <p>本文主要介绍了 JUC 中的 <code>AbstractQueuedSynchronizer</code> 的实现基础、其和 CLH 队列锁之间的关联、独占锁模式及共享锁模式加解锁的过程等。不包含 <code>ConditionObject</code> 的分析。</p>
+<h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>AQS 提供了实现同步阻塞队列的基本框架，是 juc 包中其他众多同步原语和锁实现的基础。</p>
 <blockquote>
 <p>Provides a framework for implementing blocking locks and related synchronizers (semaphores, events, etc) that rely on first-in-first-out (FIFO) wait queues. This class is designed to be a useful basis for most kinds of synchronizers that rely on a single atomic int value to represent state. Subclasses must define the protected methods that change this state, and which define what that state means in terms of this object being acquired or released. Given these, the other methods in this class carry out all queuing and blocking mechanics. Subclasses can maintain other state fields, but only the atomically updated int value manipulated using methods getState, setState and compareAndSetState is tracked with respect to synchronization.</p>
 </blockquote>
@@ -199,7 +326,7 @@
 <li>AQS 提供了一种基于先入先出 FIFO 等待队列的线程同步框架；</li>
 <li>AQS 被设计为其他同步器实现的基础，其他同步器需要在内部实现 AQS 的模板方法，来实现自己的同步原语。</li>
 </ul>
-<h1 id="Node-数据结构"><a href="#Node-数据结构" class="headerlink" title="Node 数据结构"></a>Node 数据结构</h1><p><code>Node</code> 结构是 AQS 阻塞队列实现的基础结构，是 AQS 排队、获取锁、释放锁等行为被操作的对象。其实现基于 CLH Queue Lock 中的节点数据结构，关于 CLH Queue Lock，可以参考笔者之前的博客（<a href="https://caffcen.github.io/2023/04/09/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-CLH-Queue-Lock/">深入理解 CLH Queue Lock | caffcen’s blog</a>）：</p>
+<h1 id="Node-数据结构"><a href="#Node-数据结构" class="headerlink" title="Node 数据结构"></a>Node 数据结构</h1><p><code>Node</code> 结构是 AQS 阻塞队列实现的基础结构，是 AQS 排队、获取锁、释放锁等行为被操作的对象。<code>Node</code> 代表的其实就是想要获取锁的线程，每一个 <code>Node</code> 对象都是对一个想要获取锁的线程的封装和表示，其实现基于 CLH Queue Lock 中的节点数据结构，关于 CLH Queue Lock，可以参考笔者之前的博客（<a href="https://caffcen.github.io/2023/04/09/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-CLH-Queue-Lock/">深入理解 CLH Queue Lock | caffcen’s blog</a>）：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">class</span> <span class="title class_">Node</span> &#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Node</span> <span class="variable">SHARED</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Node</span>();  <span class="comment">// 节点处于共享等待的标识</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Node</span> <span class="variable">EXCLUSIVE</span> <span class="operator">=</span> <span class="literal">null</span>;  <span class="comment">// 节点处于独占等待的标识</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">int</span> <span class="variable">CANCELLED</span> <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">int</span> <span class="variable">SIGNAL</span> <span class="operator">=</span> -<span class="number">1</span>;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">int</span> <span class="variable">CONDITION</span> <span class="operator">=</span> -<span class="number">2</span>;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">int</span> <span class="variable">PROPAGATE</span> <span class="operator">=</span> -<span class="number">3</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">volatile</span> <span class="type">int</span> waitStatus;  <span class="comment">// 线程的状态</span></span><br><span class="line">    <span class="keyword">volatile</span> Node prev;  <span class="comment">// 前驱节点</span></span><br><span class="line">    <span class="keyword">volatile</span> Node next;  <span class="comment">// 后继节点</span></span><br><span class="line">    <span class="keyword">volatile</span> Thread thread;  <span class="comment">// 节点对应的线程</span></span><br><span class="line"></span><br><span class="line">    Node nextWaiter;  <span class="comment">// 指向下一个等待在条件变量上的节点</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 
 <p><code>waitStatus</code> 可能有几种取值：</p>
@@ -287,6 +414,7 @@
 <li><code>setHeadAndPropagate</code> 首先将当前获得了共享锁的节点出队，之后在满足条件的情况下，尝试唤醒队列中被阻塞的线程</li>
 <li><code>doReleaseShared</code> 不断尝试唤醒被阻塞的线程，直到 <code>head</code> 因为某个线程也成功地获得到了共享锁而被更新为止</li>
 </ul>
+<p>因为共享锁模式下，共同持有锁的多个线程势必将带来比较复杂的竞争，笔者对这部分内容的理解也不是很透彻，推荐阅读文末 Reference 中的美团技术博客（<a target="_blank" rel="noopener" href="https://tech.meituan.com/2019/12/05/aqs-theory-and-apply.html">从ReentrantLock的实现看AQS的原理及应用 - 美团技术团队</a>），其中有较好的分析。</p>
 <h2 id="共享锁模式下的解锁操作"><a href="#共享锁模式下的解锁操作" class="headerlink" title="共享锁模式下的解锁操作"></a>共享锁模式下的解锁操作</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">class</span> <span class="title class_">AbstractQueuedSynchronizer</span></span><br><span class="line">    <span class="keyword">extends</span> <span class="title class_">AbstractOwnableSynchronizer</span></span><br><span class="line">    <span class="keyword">implements</span> <span class="title class_">java</span>.io.Serializable &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Releases in shared mode.  Implemented by unblocking one or more</span></span><br><span class="line"><span class="comment">     * threads if &#123;<span class="doctag">@link</span> #tryReleaseShared&#125; returns true.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> arg the release argument.  This value is conveyed to</span></span><br><span class="line"><span class="comment">     *        &#123;<span class="doctag">@link</span> #tryReleaseShared&#125; but is otherwise uninterpreted</span></span><br><span class="line"><span class="comment">     *        and can represent anything you like.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> the value returned from &#123;<span class="doctag">@link</span> #tryReleaseShared&#125;</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="type">boolean</span> <span class="title function_">releaseShared</span><span class="params">(<span class="type">int</span> arg)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (tryReleaseShared(arg)) &#123;</span><br><span class="line">            doReleaseShared();</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 
 <p>解锁操作很简单，调用了同步器实现的 <code>tryReleaseShared</code> 方法，如果成功释放了共享资源则调用 <code>doReleaseShared</code> 唤醒后续线程。</p>
@@ -1433,148 +1561,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
-    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/02/19/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7%E5%92%8C%E6%8C%81%E4%B9%85%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="caffcen">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="caffcen's blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/02/19/%E6%9C%AC%E5%9C%B0%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%8E%9F%E5%AD%90%E6%80%A7%E5%92%8C%E6%8C%81%E4%B9%85%E6%80%A7%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84/" class="post-title-link" itemprop="url">本地事务的原子性和持久性是如何实现的</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2023-02-19 14:16:19" itemprop="dateCreated datePublished" datetime="2023-02-19T14:16:19+08:00">2023-02-19</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-26 14:13:09" itemprop="dateModified" datetime="2023-02-26T14:13:09+08:00">2023-02-26</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>要实现持久性，数据库事务的修改必须要写入到磁盘中，否则，当出现数据库异常退出、系统宕机、机房断电等意外情况时，位于内存中的所有数据将会丢失。</p>
-<p>但是，磁盘的操作又不是一个原子性行为，数据库可能在写入前、写入后、正在写等状态发生异常，这就需要我们采取一定的手段来保证事务的原子性。</p>
-<p>目前的数据库管理系统采用的是先写日志、再写磁盘的策略来保证事务的原子性以及持久性的。本文将阐述 Commit Logging、Shadow Paging 以及 Write-Ahead Logging 三种策略。</p>
-<h1 id="Commit-Logging"><a href="#Commit-Logging" class="headerlink" title="Commit Logging"></a>Commit Logging</h1><p>Commit logging 是一种事务实现方式。在将数据修改写到磁盘之前，先把事务操作所需要的所有信息（包括修改什么数据、数据物理上位于哪个内存页和磁盘块中、从什么值改成什么值，等等）以日志的形式写到文件中。</p>
-<p>只有日志记录全部写入到了磁盘之中后（日记文件也需要持久化到磁盘中），才会根据日志记录中记录的信息将修改写入到磁盘。</p>
-<p>一个事务成功提交会，会在日志记录中添加上 <code>Commit Record</code> ，表示事务已经成功提交。在讲事务的修改成功写入到磁盘中后，还会在添加上一条 <code>End Record</code> 用来标识磁盘写入成功。</p>
-<h2 id="Commit-Logging-如何保证持久性和原子性"><a href="#Commit-Logging-如何保证持久性和原子性" class="headerlink" title="Commit Logging 如何保证持久性和原子性"></a>Commit Logging 如何保证持久性和原子性</h2><p>一旦事务在日志记录中写入了 <code>Commit Record</code> ，那么该事务的所有修改已经全部安全落盘，那么，即便数据库在讲事务的修改写入到磁盘的过程中异常退出，在数据库系统重启恢复阶段，也能够将未完成的写入继续做完，这保证了事务的持久性。</p>
-<p>如果 DBMS 在将一个事务的 <code>Commit Record</code> 安全写入到日志文件之前就异常终止，那么，只需要在 DBMS 重启恢复阶段，回滚该事务的所有变更的写入操作即可，这保证了事务的原子性，不会存在中间状态。</p>
-<h2 id="Commit-Logging-的缺陷"><a href="#Commit-Logging-的缺陷" class="headerlink" title="Commit Logging 的缺陷"></a>Commit Logging 的缺陷</h2><p>Commit Logging 的缺陷在于，在事务讲修改更新操作完全写入日志记录文件之前，无法讲修改写到磁盘之中，日志文件的修改和磁盘的修改变成了同步的操作。如果在日志文件写入的同时磁盘处于空闲状态，那么将会导致磁盘资源的空置和浪费。</p>
-<h1 id="Shadow-Paging"><a href="#Shadow-Paging" class="headerlink" title="Shadow Paging"></a>Shadow Paging</h1><p>Shadow paging 是另一个实现事务原子性以及持久性的技术。它是基于 Copy-on-Write 的方法。</p>
-<p>Shadow paging 是这样工作的：</p>
-<ol>
-<li>在事务修改一个数据页之前，将会复制一份该数据页的副本，该副本即为原数据页的影子 shadow。</li>
-<li>所有的修改将会作用于影子页，因为影子页没有被位于磁盘中的任何数据页所引用，因此它的修改是十分安全的，不会影响一致性。</li>
-<li>当影子页准备被持久化的时候，磁盘中所有引用原数据页的指针将被指向影子页。</li>
-<li>最后一步的指针修改可以认为是原子性的，现在磁盘在硬件上保证了不会出现改了『半个值』的情况。</li>
-</ol>
-<h2 id="Shadow-Paging-的缺点"><a href="#Shadow-Paging-的缺点" class="headerlink" title="Shadow Paging 的缺点"></a>Shadow Paging 的缺点</h2><p>Shadow paging 的实现要比 Commit Logging 更加简单，但只要涉及到并发锁时，Shadow Paging 所能够处理的并发事务数量将成为一个瓶颈。</p>
-<h1 id="Write-Ahead-Logging"><a href="#Write-Ahead-Logging" class="headerlink" title="Write-Ahead Logging"></a>Write-Ahead Logging</h1><p>我们在描述 Commit Logging 的缺点时提到，Commit Logging 最大的缺陷在于日志记录的写入和磁盘的写入是一个同步操作：只有在日志记录写入完成之后才会开始将修改写入到磁盘，这是对硬件资源的空置和浪费。</p>
-<p>如果我们允许在日志记录写入完全之前，就开始将日志记录中的一部分修改写入到磁盘，那将提高硬件资源的使用情况，同时加快整个事务的执行过程，这就是 Write-Ahead Logging 策略。</p>
-<h2 id="FORCE-and-STEAL"><a href="#FORCE-and-STEAL" class="headerlink" title="FORCE and STEAL"></a>FORCE and STEAL</h2><p>我们将事务提交后，修改必须同时完成写入称为 FORCE，不必须同时完成写入称为 NO-FORCE。</p>
-<p>我们将事务提交之前，允许修改提前写入到磁盘称为 STEAL，不允许称为 NO-STEAL。</p>
-<p>一个事务如果是 NO-FORCE 且 STEAL 的话，那么性能将达到最好：</p>
-<ol>
-<li>如果一个事务已经将修改安全写到了日志文件中，那么我们可以随时随地将修改写到磁盘，而无需立刻就这么做（现实中大多数 DBMS 均采用的 NO-FORCE 策略）；</li>
-<li>允许事务将修改在事务提交之前就开始写入到磁盘中，这将提高磁盘的 IO 利用率。</li>
-</ol>
-<h2 id="Write-Ahead-Logging-如何保证原子性以及持久性"><a href="#Write-Ahead-Logging-如何保证原子性以及持久性" class="headerlink" title="Write-Ahead Logging 如何保证原子性以及持久性"></a>Write-Ahead Logging 如何保证原子性以及持久性</h2><p>Commit Logging 是 NO-FORCE + NO-STEAL 的策略，因为如果 DBMS 异常退出但修改没有写入完全，那么将提前写入的这些数据就是错误数据。</p>
-<p>Write-Ahead Logging 允许 NO-FORCE，也允许 STEAL，它使用了 Undo Log 来保证提前写入的数据的正确性。当数据落盘前，必须先记录 Undo Log，Undo Log 记录了哪个数据页、哪一行的数据从什么值变成了什么值，等等。在 Undo Log 的帮助下，即便发生了异常我们也能够保证数据的正确了。</p>
-<p>Write-Ahead Logging 的 DBMS 崩溃恢复时会执行下面 3 个阶段的操作：</p>
-<ul>
-<li><strong>分析阶段</strong>（Analysis）：该阶段从最后一次 checkpoint 开始扫描日志，找出所有没有 <code>End Record</code> 的事务，组成待恢复的事务集合。</li>
-<li><strong>重做阶段</strong>（Redo）：该阶段会将待恢复事务集合中，已经在日志文件中写入了 <code>Commit Record</code> 的事务进行重做，写入完成后再添加上一条 <code>End Record</code> ，然后移除出待恢复事务集合。这些事务的全部修改都已经包含在了日志文件中，可以安全落盘，保证了事务的持久性。</li>
-<li><strong>回滚阶段</strong>（Undo）：待恢复的事务集合中，还剩下那些没有在日志文件中写入 <code>Commit Record</code> ，它们被称为 Loser，根据 Undo Log 中的信息，将已经提前写入磁盘的信息重新改写回去，以达到回滚这些 Loser 事务的目的。这保证了事务的原子性。</li>
-</ul>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>NO-STEAL</th>
-<th>STEAL</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>NO-FORCE</td>
-<td></td>
-<td>最快</td>
-</tr>
-<tr>
-<td>FORCE</td>
-<td>最慢</td>
-<td></td>
-</tr>
-</tbody></table>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>NO-STEAL</th>
-<th>STEAL</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>NO-FORCE</td>
-<td>重做日志</td>
-<td>重做日志+回滚日志</td>
-</tr>
-<tr>
-<td>FORCE</td>
-<td>不需要日志</td>
-<td>回滚日志</td>
-</tr>
-</tbody></table>
-<h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><ol>
-<li><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Shadow_paging">Shadow paging - Wikipedia</a></li>
-<li><a target="_blank" rel="noopener" href="http://icyfenix.cn/architect-perspective/general-architecture/transaction/local.html">本地事务 | 凤凰架构</a></li>
-<li>《MySQL 技术内幕——InnoDB 存储引擎》</li>
-</ol>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1644,7 +1630,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-count">14</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
