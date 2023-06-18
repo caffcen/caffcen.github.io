@@ -22,19 +22,19 @@
 
   <meta name="description" content="简介AQS 提供了实现同步阻塞队列的基本框架，是 juc 包中其他众多同步原语和锁实现的基础。  Provides a framework for implementing blocking locks and related synchronizers (semaphores, events, etc) that rely on first-in-first-out (FIFO) wait qu">
 <meta property="og:type" content="article">
-<meta property="og:title" content="深入理解 AbstractQueuedSynchronizer">
-<meta property="og:url" content="https://caffcen.github.io/2023/05/21/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-AbstractQueuedSynchronizer/index.html">
+<meta property="og:title" content="AbstractQueuedSynchronizer 简介">
+<meta property="og:url" content="https://caffcen.github.io/2023/05/21/AbstractQueuedSynchronizer-%E7%AE%80%E4%BB%8B/index.html">
 <meta property="og:site_name" content="caffcen&#39;s blog">
 <meta property="og:description" content="简介AQS 提供了实现同步阻塞队列的基本框架，是 juc 包中其他众多同步原语和锁实现的基础。  Provides a framework for implementing blocking locks and related synchronizers (semaphores, events, etc) that rely on first-in-first-out (FIFO) wait qu">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2023-05-21T10:25:12.000Z">
-<meta property="article:modified_time" content="2023-05-21T10:31:32.279Z">
+<meta property="article:modified_time" content="2023-06-18T06:02:12.421Z">
 <meta property="article:author" content="caffcen">
 <meta property="article:tag" content="java">
 <meta property="article:tag" content="juc">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="https://caffcen.github.io/2023/05/21/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-AbstractQueuedSynchronizer/">
+<link rel="canonical" href="https://caffcen.github.io/2023/05/21/AbstractQueuedSynchronizer-%E7%AE%80%E4%BB%8B/">
 
 
 <script id="page-configurations">
@@ -47,7 +47,7 @@
   };
 </script>
 
-  <title>深入理解 AbstractQueuedSynchronizer | caffcen's blog</title>
+  <title>AbstractQueuedSynchronizer 简介 | caffcen's blog</title>
   
 
 
@@ -152,7 +152,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh_CN">
-    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/05/21/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-AbstractQueuedSynchronizer/">
+    <link itemprop="mainEntityOfPage" href="https://caffcen.github.io/2023/05/21/AbstractQueuedSynchronizer-%E7%AE%80%E4%BB%8B/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -165,7 +165,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          深入理解 AbstractQueuedSynchronizer
+          AbstractQueuedSynchronizer 简介
         </h1>
 
         <div class="post-meta">
@@ -174,10 +174,16 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2023-05-21 18:25:12 / Modified: 18:31:32" itemprop="dateCreated datePublished" datetime="2023-05-21T18:25:12+08:00">2023-05-21</time>
+              <time title="Created: 2023-05-21 18:25:12" itemprop="dateCreated datePublished" datetime="2023-05-21T18:25:12+08:00">2023-05-21</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-06-18 14:02:12" itemprop="dateModified" datetime="2023-06-18T14:02:12+08:00">2023-06-18</time>
+              </span>
 
           
 
