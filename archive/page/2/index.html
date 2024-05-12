@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    
+    <title>Lihang Liu&#39;s Homepage</title>
+    <meta name="viewport" content="width=device-width,minimum-scale=1">
+    <meta name="description" content="">
+    <meta name="generator" content="Hugo 0.125.7">
+    
+    
+    
+    
+      <meta name="robots" content="noindex, nofollow">
+    
+    
+
+    
+<link rel="stylesheet" href="/ananke/css/main.min.css" >
+
+
+
+    
+
+    
+      
+
+    
+
+    
+    
+      <link href="/archive/index.xml" rel="alternate" type="application/rss+xml" title="Lihang Liu&#39;s Homepage" />
+      <link href="/archive/index.xml" rel="feed" type="application/rss+xml" title="Lihang Liu&#39;s Homepage" />
+      
+    
+
+    
+      <link rel="canonical" href="https://caffcen.github.io/archive/">
+    
+
+    <meta property="og:url" content="https://caffcen.github.io/archive/">
+  <meta property="og:site_name" content="Lihang Liu&#39;s Homepage">
+  <meta property="og:title" content="Archives">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="website">
+
+  <meta itemprop="name" content="Archives">
+  <meta itemprop="dateModified" content="2024-06-18T16:04:41+08:00"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="Archives">
+<meta name="twitter:description" content="">
+
+	
+  </head>
+
+  <body class="ma0 avenir bg-near-white">
+
+    
+
+  <header>
+    <div class="pb3-m pb6-l bg-black">
+      <nav class="pv3 ph3 ph4-ns" role="navigation">
+  <div class="flex-l justify-between items-center center">
+    <a href="/" class="f3 fw2 hover-white no-underline white-90 dib">
+      
+        Lihang Liu&#39;s Homepage
+      
+    </a>
+    <div class="flex-l items-center">
+      
+
+      
+      
+<div class="ananke-socials">
+  
+</div>
+
+    </div>
+  </div>
+</nav>
+
+      <div class="tc-l pv3 ph3 ph4-ns">
+        <h1 class="f2 f-subheadline-l fw2 light-silver mb0 lh-title">
+          Archives
+        </h1>
+        
+      </div>
+    </div>
+  </header>
+
+
+    <main class="pb7" role="main">
+      
+  <article class="pa3 pa4-ns nested-copy-line-height">
+    <section class="cf ph3 ph5-l pv3 pv4-l f4 tc-l center measure-wide lh-copy mid-gray"></section>
+    <section class="flex-ns flex-wrap justify-around mt5">
+      
+        <div class="relative w-100 w-30-l mb4 bg-white">
+          <div class="relative w-100 mb4 bg-white nested-copy-line-height">
+  <div class="bg-white mb3 pa4 gray overflow-hidden">
+    <span class="f6 db">Archives</span>
+    <h1 class="f3 near-black">
+      <a href="/archive/3_implement_isolation/" class="link black dim">
+        本地事务的隔离性是如何实现的
+      </a>
+    </h1>
+    <div class="nested-links f5 lh-copy nested-copy-line-height">
+      如果没有并发的存在，数据库所有事务总是串行执行的，那么也就不会有临界资源竞争的情况出现，但现实情况是不可能没有并发的存在。
+为了保证并发的正确性，需要通过对数据库资源加锁。本文将首先介绍数据库中的锁，之后会介绍各个隔离级别及其实现方式。
+锁 写锁（Write Lock，也叫作排他锁，eXclusive Lock，简写为 X-Lock）：如果数据有加写锁，就只有持有写锁的事务才能对数据进行写入操作，数据加持着写锁时，其他事务不能写入数据，也不能施加读锁。 读锁（Read Lock，也叫作共享锁，Shared Lock，简写为 S-Lock）：多个事务可以对同一个数据添加多个读锁，数据被加上读锁后就不能再被加上写锁，所以其他事务不能对该数据进行写入，但仍然可以读取。对于持有读锁的事务，如果该数据只有它自己一个事务加了读锁，允许直接将其升级为写锁，然后写入数据。 范围锁（Range Lock）：对于某个范围直接加排他锁，在这个范围内的数据不能被写入。 特别注意：写锁禁止其他事务施加读锁，而不是禁止事务读取数据。
+兼容性 只有读锁和读锁是兼容的，写锁不兼容任何其他锁。
+Write Lock (X) Read Lock (S) Write Lock (X) 不兼容 不兼容 Read Lock (S) 不兼容 兼容 事务隔离级别 事务的隔离性是通过锁的机制来实现的，事务的隔离性越高，并发吞吐量越低，为了让开发人员能够在吞吐量以及隔离性之前取的较好的平衡点，数据库提供了多种隔离性级别。
+从本质上来说，事务在不同隔离级别下的不同表现，来源于不同隔离级别采取的加锁机制的不同。
+下表是事务的 4 个隔离级别，隔离性从上到下依次递减：
+隔离级别 特征 可能存在的问题 Serializability，可串行性 多个事务并发执行的效果，和串行执行的效果一致。 无 Repeatable read，可重复读 可重复度保证一个事务读取到的数据，在整个事务执行过程中不会改变。 幻读 Read committed，读已提交 不允许一个事务读取到其他事务提交的数据。 幻读、不可重复读 Read uncommitted，读未提交 允许一个事务读取到其他事务未提交的数据。 幻读、不可重复读、脏读 Serializability, 可串行性 对事务所涉及到的数据加读锁、写锁、范围锁即可实现 Serializability 所要求的隔离性。
+Repeatable Read, 可重复读 可重复读 对事务所涉及的数据加读锁和写锁，且一直持有至事务结束，但不再加范围锁。这就意味着 可重复读 可能会出现幻读（Phantom reads, 可参考下文针对幻读问题的讨论）的问题，比如说：
+    </div>
+    <a href="/archive/3_implement_isolation/" class="ba b--moon-gray bg-light-gray br2 color-inherit dib f7 hover-bg-moon-gray link mt2 ph2 pv1">read more</a>
+  </div>
+</div>
+
+        </div>
+      
+        <div class="relative w-100 w-30-l mb4 bg-white">
+          <div class="relative w-100 mb4 bg-white nested-copy-line-height">
+  <div class="bg-white mb3 pa4 gray overflow-hidden">
+    <span class="f6 db">Archives</span>
+    <h1 class="f3 near-black">
+      <a href="/archive/2_cap_pacelc_theory/" class="link black dim">
+        CAP 理论和 PACELC 理论
+      </a>
+    </h1>
+    <div class="nested-links f5 lh-copy nested-copy-line-height">
+      CAP 理论 CAP 理论阐述的是，一个分布式系统不可能同时满足一致性（consistency）、可用性（availability）和分区容错性（partition tolerance）这 3 个特性，至多只能满足其中的两个，实际上要么满足 CP（一致性+分区容错性），要么满足 AP（可用性+分区容错性）。
+一致性 consistency 读请求（read request）总是能得到最新的值，也就是说，在任何时间，分布式系统中所有节点对于任一一个值存储的都是相同版本。这便是一致性。
+可用性 availability 可用性意思是，每一个请求都能够收到非异常返回，但并不保证请求拿到的值就是最新的值。
+分区容错性 partition tolerance 分区（partition）意味着分布式系统的任意一对节点出现了通讯中断。而分区容错性则要求，即便在内部节点出现故障时，整个系统依然能够运行，部分节点之间的网络异常不会导致整个系统的失效。
+分区容错的必要性 分区容错性是一个分布式系统不可或缺的特性，因为任何系统的任意节点之间都有可能出现网络故障。当一个系统出现分区，部分内部节点无法访问彼此的时候，必须要在一致性和可用性之间做出选择：是为了保障服务依然可用而损害一致性呢，又或者是保障一致性而拒绝服务？
+举个例子，考虑上图的情况，假设有两个节点 A 和 B 之间发生了分区的情况，当用户先向节点 B 给 X 变量写一个值后，从节点 A 读取 X 变量，那么系统面临着两个选择：
+它可以选择其中一个请求返回失败，但这样就损害了可用性 它可以处理两个请求，但是针对读请求返回一个旧的值，但这样就破坏了一致性 因此，我们能够得出结论：
+实际上，CAP 理论要求一个分布式系统在内部节点发生网络故障，分区错误发生时，要么选择保留一致性，要么选择维护可用性。
+PACELC 理论 PACELC 理论是 CAP 理论的补充，以下这段文字摘抄自维基百科 PACELC theorem - Wikipedia，它指出了 PACELC 这几个字母的缩写是怎么来的：
+In theoretical computer science, the PACELC theorem is an extension to the CAP theorem. It states that in case of network partitioning (P) in a distributed computer system, one has to choose between availability (A) and consistency (C) (as per the CAP theorem), but else (E), even when the system is running normally in the absence of partitions, one has to choose between latency (L) and consistency (C).
+    </div>
+    <a href="/archive/2_cap_pacelc_theory/" class="ba b--moon-gray bg-light-gray br2 color-inherit dib f7 hover-bg-moon-gray link mt2 ph2 pv1">read more</a>
+  </div>
+</div>
+
+        </div>
+      
+        <div class="relative w-100 w-30-l mb4 bg-white">
+          <div class="relative w-100 mb4 bg-white nested-copy-line-height">
+  <div class="bg-white mb3 pa4 gray overflow-hidden">
+    <span class="f6 db">Archives</span>
+    <h1 class="f3 near-black">
+      <a href="/archive/1_leetcode_note_1_sliding_window/" class="link black dim">
+        LeetCode 笔记 1：Sliding Window 题目总结
+      </a>
+    </h1>
+    <div class="nested-links f5 lh-copy nested-copy-line-height">
+      什么是滑动窗口算法 先用一个简单的题目来说明什么是滑动窗口算法。
+最直接的思路就是，对于每个给定的 index，计算出从该 index 开始的一个最小 subarray，其和大于 target:
+int minLength = Integer.MAX_VALUE; for (int i = 0; i &lt; nums.length; ++i) { int sum = 0; for (int j = i; j &lt; nums.length; ++j) { sum += nums[j]; if (sum &gt; target) { minLength = Math.min(minLength, j - i + 1); } break; } } 这个算法的问题就在于，相邻的 index 之间，存在着重合的计算。
+解决办法就是维护一个滑动窗口，这样就能够解决重复计算的问题了：
+class Solution { public int minSubArrayLen(int target, int[] nums) { int res = Integer.
+    </div>
+    <a href="/archive/1_leetcode_note_1_sliding_window/" class="ba b--moon-gray bg-light-gray br2 color-inherit dib f7 hover-bg-moon-gray link mt2 ph2 pv1">read more</a>
+  </div>
+</div>
+
+        </div>
+      
+    </section>
+    <ul class="pagination pagination-default">
+      <li class="page-item">
+        <a href="/archive/" aria-label="First" class="page-link" role="button"><span aria-hidden="true">&laquo;&laquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/archive/" aria-label="Previous" class="page-link" role="button"><span aria-hidden="true">&laquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/archive/" aria-label="Page 1" class="page-link" role="button">1</a>
+      </li>
+      <li class="page-item active">
+        <a aria-current="page" aria-label="Page 2" class="page-link" role="button">2</a>
+      </li>
+      <li class="page-item disabled">
+        <a aria-disabled="true" aria-label="Next" class="page-link" role="button" tabindex="-1"><span aria-hidden="true">&raquo;</span></a>
+      </li>
+      <li class="page-item disabled">
+        <a aria-disabled="true" aria-label="Last" class="page-link" role="button" tabindex="-1"><span aria-hidden="true">&raquo;&raquo;</span></a>
+      </li>
+    </ul></article>
+
+    </main>
+    <footer class="bg-black bottom-0 w-100 pa3" role="contentinfo">
+  <div class="flex justify-between">
+  <a class="f4 fw4 hover-white no-underline white-70 dn dib-ns pv2 ph3" href="https://caffcen.github.io/" >
+    &copy;  Lihang Liu's Homepage 2024 
+  </a>
+    <div>
+<div class="ananke-socials">
+  
+</div>
+</div>
+  </div>
+</footer>
+
+  </body>
+</html>
