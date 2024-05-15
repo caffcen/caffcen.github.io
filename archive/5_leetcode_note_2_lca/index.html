@@ -1,93 +1,137 @@
 <!DOCTYPE html>
-<html><head lang="en">
-	<meta charset="utf-8" />
-	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>LeetCode 笔记 2：Binary Tree Lowest Common Ancestor - Lihang Liu&#39;s Homepage</title><meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="description" content="Loweset Common Ancestor From wikipedia Lowest common ancestor - Wikipedia:
-In graph theory and computer science, the lowest common ancestor (LCA) (also called least common ancestor) of two nodes v and w in a [tree]( https://en.wikipedia.org/wiki/Tree_ (graph_theory) &ldquo;Tree (graph theory)&quot;) or directed acyclic graph (DAG) T is the lowest (i.e. deepest) node that has both v and w as descendants, where we define each node to be a descendant of itself (so if v has a direct connection from w, w is the lowest common ancestor)." />
-	<meta property="og:image" content=""/>
-	<meta property="og:url" content="https://caffcen.github.io/archive/5_leetcode_note_2_lca/">
-  <meta property="og:site_name" content="Lihang Liu&#39;s Homepage">
-  <meta property="og:title" content="LeetCode 笔记 2：Binary Tree Lowest Common Ancestor">
-  <meta property="og:description" content="Loweset Common Ancestor From wikipedia Lowest common ancestor - Wikipedia:
-In graph theory and computer science, the lowest common ancestor (LCA) (also called least common ancestor) of two nodes v and w in a [tree]( https://en.wikipedia.org/wiki/Tree_ (graph_theory) “Tree (graph theory)&#34;) or directed acyclic graph (DAG) T is the lowest (i.e. deepest) node that has both v and w as descendants, where we define each node to be a descendant of itself (so if v has a direct connection from w, w is the lowest common ancestor).">
-  <meta property="og:locale" content="en-us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="archive">
-    <meta property="article:published_time" content="2023-02-19T16:03:14+08:00">
-    <meta property="article:modified_time" content="2023-02-19T16:03:14+08:00">
-<meta name="twitter:card" content="summary"><meta name="twitter:title" content="LeetCode 笔记 2：Binary Tree Lowest Common Ancestor">
-<meta name="twitter:description" content="Loweset Common Ancestor From wikipedia Lowest common ancestor - Wikipedia:
-In graph theory and computer science, the lowest common ancestor (LCA) (also called least common ancestor) of two nodes v and w in a [tree]( https://en.wikipedia.org/wiki/Tree_ (graph_theory) &ldquo;Tree (graph theory)&quot;) or directed acyclic graph (DAG) T is the lowest (i.e. deepest) node that has both v and w as descendants, where we define each node to be a descendant of itself (so if v has a direct connection from w, w is the lowest common ancestor).">
-<script src="https://caffcen.github.io/js/feather.min.js"></script>
-	
-	
-        <link href="https://caffcen.github.io/css/fonts.2c2227b81b1970a03e760aa2e6121cd01f87c88586803cbb282aa224720a765f.css" rel="stylesheet">
-	
+<html lang="en-us"
+  dir="ltr">
 
-	
-	<link rel="stylesheet" type="text/css" media="screen" href="https://caffcen.github.io/css/main.ac08a4c9714baa859217f92f051deb58df2938ec352b506df655005dcaf98cc0.css" />
-		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="https://caffcen.github.io/css/dark.726cd11ca6eb7c4f7d48eb420354f814e5c1b94281aaf8fd0511c1319f7f78a4.css"  disabled />
-	
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
 
-	
-	
+<title>
+    
+    LeetCode 笔记 2：Binary Tree Lowest Common Ancestor | Lihang Liu&#39;s Homepage
+    
+</title>
 
-	
-	
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.css">
-		<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.js"></script>
-		<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
-		
-		
-		<script>
-			document.addEventListener("DOMContentLoaded", function() {
-					renderMathInElement(document.body, {
-							delimiters: [
-									{left: "$$", right: "$$", display: true},
-									{left: "$", right: "$", display: false}
-							]
-					});
-			});
-			</script>
-	
-	
-	
-</head>
-<body>
-        <div class="content"><header>
-	<div class="main">
-		<a href="https://caffcen.github.io/">Lihang Liu&#39;s Homepage</a>
-	</div>
-	<nav>
-		
-		<a href="/">Home</a>
-		
-		<a href="/blog/">Blog</a>
-		
-		<a href="/archive/">Archive</a>
-		
-		| <span id="dark-mode-toggle" onclick="toggleTheme()"></span>
-		<script src="https://caffcen.github.io/js/themetoggle.js"></script>
-		
-	</nav>
-</header>
 
-<main>
-	<article>
-		<div class="title">
-			<h1 class="title">LeetCode 笔记 2：Binary Tree Lowest Common Ancestor</h1>
-			<div class="meta">Posted on Feb 19, 2023</div>
-		</div>
-		
 
-		<section class="body">
-			<h1 id="loweset-common-ancestor">Loweset Common Ancestor</h1>
+<link rel="stylesheet" href="/assets/combined.min.95bd8f25e3a82100ceaab7f49774821700d8d89a2b551df9cd199c4de2d1626f.css" media="all">
+
+
+
+
+  
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="auto">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+    <h1 class="header-title">Lihang Liu&#39;s Homepage</h1>
+
+    <div class="flex">
+        
+
+        
+        
+        <p class="small ">
+            <a href="/">
+                /Home
+            </a>
+        </p>
+        
+        <p class="small ">
+            <a href="/blog/">
+                /Blog
+            </a>
+        </p>
+        
+        <p class="small ">
+            <a href="/archive/">
+                /Archive
+            </a>
+        </p>
+        
+        
+    </div>
+
+</div>
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Lihang Liu&#39;s Homepage</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/archive/">Archive</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/archive/5_leetcode_note_2_lca/">LeetCode 笔记 2：Binary Tree Lowest Common Ancestor</a>
+</div>
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title">LeetCode 笔记 2：Binary Tree Lowest Common Ancestor</h1>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2023-02-19T16:03:14&#43;08:00">February 19, 2023</time>
+      
+
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <h1 id="loweset-common-ancestor">Loweset Common Ancestor</h1>
 <p>From wikipedia <a href="https://en.wikipedia.org/wiki/Lowest_common_ancestor#:~:text=In%20ontologies%2C%20the%20lowest%20common,and%20w%20to%20the%20root.">Lowest common ancestor - Wikipedia</a>:</p>
 <blockquote>
 <p>In <a href="https://en.wikipedia.org/wiki/Graph_theory" title="Graph theory">graph theory</a> and <a href="https://en.wikipedia.org/wiki/Computer_science" title="Computer science">computer science</a>, the <strong>lowest common ancestor</strong> (<strong>LCA</strong>) (also called least common ancestor) of two nodes v and w in a [tree]( <a href="https://en.wikipedia.org/wiki/Tree">https://en.wikipedia.org/wiki/Tree</a>_ (graph_theory) &ldquo;Tree (graph theory)&quot;) or <a href="https://en.wikipedia.org/wiki/Directed_acyclic_graph" title="Directed acyclic graph">directed acyclic graph</a> (DAG) T is the lowest (i.e. deepest) node that has both v and w as descendants, where we define each node to be a descendant of itself (so if v has a direct connection from w, w is the lowest common ancestor).</p>
 </blockquote>
 <p>概念很简单，举几个例子：</p>
-<p><img src="Pasted%20image%2020230219143145.png" alt=""></p>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" Pasted%20image%2020230219143145.png">
+</figure></p>
 <ul>
 <li>A 和 B 的 LCA 是 A；</li>
 <li>B 和 C 的 LCA 是 A;</li>
@@ -111,32 +155,38 @@ In graph theory and computer science, the lowest common ancestor (LCA) (als
 <li>要么是 <code>X</code> 或者 <code>Y</code> 的上层节点，这表示 <code>X</code> 和 <code>Y</code> 都位于它们的 <code>LCA</code> 子树之中。</li>
 </ol>
 <p>而我们的算法在递归的过程中，至多只会遇到一次，左子树返回和右子树返回均不为空的情况；否则，我们将非空节点返回即可，该非空节点即为题目所求的 <code>LCA</code> ：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Solution</span> {
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> TreeNode <span style="color:#a6e22e">lowestCommonAncestor</span>(TreeNode root, TreeNode p, TreeNode q) {
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">null</span>;
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="font-weight:bold;font-style:italic;text-decoration:underline">class</span> <span style="color:#666;font-weight:bold;font-style:italic">Solution</span> {
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> TreeNode <span style="color:#666;font-weight:bold;font-style:italic">lowestCommonAncestor</span>(TreeNode root, TreeNode p, TreeNode q) {
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> (root == <span style="font-weight:bold;text-decoration:underline">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> <span style="font-weight:bold;text-decoration:underline">null</span>;
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>        
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> p <span style="color:#f92672">||</span> root <span style="color:#f92672">==</span> q) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> root;
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> (root == p || root == q) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> root;
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>        
-</span></span><span style="display:flex;"><span>        TreeNode left <span style="color:#f92672">=</span> lowestCommonAncestor(root.<span style="color:#a6e22e">left</span>, p, q);
-</span></span><span style="display:flex;"><span>        TreeNode right <span style="color:#f92672">=</span> lowestCommonAncestor(root.<span style="color:#a6e22e">right</span>, p, q);
+</span></span><span style="display:flex;"><span>        TreeNode left = lowestCommonAncestor(root.left, p, q);
+</span></span><span style="display:flex;"><span>        TreeNode right = lowestCommonAncestor(root.right, p, q);
 </span></span><span style="display:flex;"><span>        
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (left <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span> <span style="color:#f92672">&amp;&amp;</span> right <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> root;
-</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (left <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> left;
-</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> right;
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> (left != <span style="font-weight:bold;text-decoration:underline">null</span> &amp;&amp; right != <span style="font-weight:bold;text-decoration:underline">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> root;
+</span></span><span style="display:flex;"><span>        } <span style="font-weight:bold;text-decoration:underline">else</span> <span style="font-weight:bold;text-decoration:underline">if</span> (left != <span style="font-weight:bold;text-decoration:underline">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> left;
+</span></span><span style="display:flex;"><span>        } <span style="font-weight:bold;text-decoration:underline">else</span> {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> right;
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><h1 id="例题">例题</h1>
 <p><strong>Example 1</strong></p>
 <p><a href="https://leetcode.com/problems/lowest-common-ancestor-of-deepest-leaves/">1123. Lowest Common Ancestor of Deepest Leaves</a></p>
-<p><img src="Pasted%20image%2020230219144905.png" alt=""></p>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" Pasted%20image%2020230219144905.png">
+</figure></p>
 <p>这道题是找出深度最深的所有叶子结点的 <code>LCA</code> ，只需分解成两个步骤：</p>
 <ol>
 <li>找到最大深度（ <code>DFS</code> ）</li>
@@ -148,50 +198,56 @@ In graph theory and computer science, the lowest common ancestor (LCA) (als
 <li>对非最大深度的节点，如果左子树返回和右子树返回均不为空，说明该节点为 <code>LCA</code> ，返回自身；否则返回左子树和右子树的非空返回；</li>
 </ol>
 <p>解法：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Solution</span> {
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">int</span> deepestDepth <span style="color:#f92672">=</span> 0;
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="font-weight:bold;font-style:italic;text-decoration:underline">class</span> <span style="color:#666;font-weight:bold;font-style:italic">Solution</span> {
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">private</span> <span style="font-weight:bold;text-decoration:underline">int</span> deepestDepth = 0;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> TreeNode <span style="color:#a6e22e">lcaDeepestLeaves</span>(TreeNode root) {
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (root.<span style="color:#a6e22e">left</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span> <span style="color:#f92672">&amp;&amp;</span> root.<span style="color:#a6e22e">right</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> root;
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> TreeNode <span style="color:#666;font-weight:bold;font-style:italic">lcaDeepestLeaves</span>(TreeNode root) {
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> (root.left == <span style="font-weight:bold;text-decoration:underline">null</span> &amp;&amp; root.right == <span style="font-weight:bold;text-decoration:underline">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> root;
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>        findDeepestDepth(root, 0);
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> lca(root, 0);
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">return</span> lca(root, 0);
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> TreeNode <span style="color:#a6e22e">lca</span>(TreeNode root, <span style="color:#66d9ef">int</span> depth) {
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">null</span>;
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">private</span> TreeNode <span style="color:#666;font-weight:bold;font-style:italic">lca</span>(TreeNode root, <span style="font-weight:bold;text-decoration:underline">int</span> depth) {
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> (root == <span style="font-weight:bold;text-decoration:underline">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> <span style="font-weight:bold;text-decoration:underline">null</span>;
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        TreeNode leftRet <span style="color:#f92672">=</span> lca(root.<span style="color:#a6e22e">left</span>, depth <span style="color:#f92672">+</span> 1);
-</span></span><span style="display:flex;"><span>        TreeNode rightRet <span style="color:#f92672">=</span> lca(root.<span style="color:#a6e22e">right</span>, depth <span style="color:#f92672">+</span> 1);
+</span></span><span style="display:flex;"><span>        TreeNode leftRet = lca(root.left, depth + 1);
+</span></span><span style="display:flex;"><span>        TreeNode rightRet = lca(root.right, depth + 1);
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (depth <span style="color:#f92672">==</span> deepestDepth) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> root;
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> (depth == deepestDepth) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> root;
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (leftRet <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span> <span style="color:#f92672">&amp;&amp;</span> rightRet <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> root;
-</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (leftRet <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> leftRet;
-</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> rightRet;
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> (leftRet != <span style="font-weight:bold;text-decoration:underline">null</span> &amp;&amp; rightRet != <span style="font-weight:bold;text-decoration:underline">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> root;
+</span></span><span style="display:flex;"><span>        } <span style="font-weight:bold;text-decoration:underline">else</span> <span style="font-weight:bold;text-decoration:underline">if</span> (leftRet != <span style="font-weight:bold;text-decoration:underline">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> leftRet;
+</span></span><span style="display:flex;"><span>        } <span style="font-weight:bold;text-decoration:underline">else</span> {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> rightRet;
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">findDeepestDepth</span>(TreeNode root, <span style="color:#66d9ef">int</span> depth) {
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (root <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">private</span> <span style="font-weight:bold;text-decoration:underline">void</span> <span style="color:#666;font-weight:bold;font-style:italic">findDeepestDepth</span>(TreeNode root, <span style="font-weight:bold;text-decoration:underline">int</span> depth) {
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> (root == <span style="font-weight:bold;text-decoration:underline">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span>;
 </span></span><span style="display:flex;"><span>        }
-</span></span><span style="display:flex;"><span>        deepestDepth <span style="color:#f92672">=</span> Math.<span style="color:#a6e22e">max</span>(deepestDepth, depth);
-</span></span><span style="display:flex;"><span>        findDeepestDepth(root.<span style="color:#a6e22e">left</span>, depth <span style="color:#f92672">+</span> 1);
-</span></span><span style="display:flex;"><span>        findDeepestDepth(root.<span style="color:#a6e22e">right</span>, depth <span style="color:#f92672">+</span> 1);
+</span></span><span style="display:flex;"><span>        deepestDepth = Math.max(deepestDepth, depth);
+</span></span><span style="display:flex;"><span>        findDeepestDepth(root.left, depth + 1);
+</span></span><span style="display:flex;"><span>        findDeepestDepth(root.right, depth + 1);
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p><strong>Example 2</strong></p>
 <p><a href="https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/">235. Lowest Common Ancestor of a Binary Search Tree</a></p>
-<p><img src="Pasted%20image%2020230219145454.png" alt=""></p>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" Pasted%20image%2020230219145454.png">
+</figure></p>
 <p>这道题目的区别是，数据结构换成了 BST，根据 BST 的性质我们可以，对于任意节点 <code>X</code> 和 <code>Y</code> 来说，它们的 <code>LCA</code> 一定满足： <code>X.val &lt;= LCA.val &amp;&amp; LCA.val &lt;= Y.val</code> 。</p>
 <p>我们只要从上到下，递归地寻到满足这一布尔条件式的节点即可：</p>
 <ol>
@@ -199,14 +255,14 @@ In graph theory and computer science, the lowest common ancestor (LCA) (als
 <li>如果 <code>LCA.val &gt; X.val &amp;&amp; LCA.val &gt; Y.val</code> ，那么当前节点值太大，我们去左子树中递归寻找；</li>
 <li>否则，当前节点值落在了 <code>X.val</code> 和 <code>Y.val</code> 之间，说明当前节点即为我们要找的 <code>LCA</code></li>
 </ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Solution</span> {
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> TreeNode <span style="color:#a6e22e">lowestCommonAncestor</span>(TreeNode root, TreeNode p, TreeNode q) {
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (root.<span style="color:#a6e22e">val</span> <span style="color:#f92672">&gt;</span> p.<span style="color:#a6e22e">val</span> <span style="color:#f92672">&amp;&amp;</span> root.<span style="color:#a6e22e">val</span> <span style="color:#f92672">&gt;</span> q.<span style="color:#a6e22e">val</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> lowestCommonAncestor(root.<span style="color:#a6e22e">left</span>, p, q);
-</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (root.<span style="color:#a6e22e">val</span> <span style="color:#f92672">&lt;</span> p.<span style="color:#a6e22e">val</span> <span style="color:#f92672">&amp;&amp;</span> root.<span style="color:#a6e22e">val</span> <span style="color:#f92672">&lt;</span> q.<span style="color:#a6e22e">val</span>) {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> lowestCommonAncestor(root.<span style="color:#a6e22e">right</span>, p, q);
-</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> root;
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="font-weight:bold;font-style:italic;text-decoration:underline">class</span> <span style="color:#666;font-weight:bold;font-style:italic">Solution</span> {
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> TreeNode <span style="color:#666;font-weight:bold;font-style:italic">lowestCommonAncestor</span>(TreeNode root, TreeNode p, TreeNode q) {
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> (root.val &gt; p.val &amp;&amp; root.val &gt; q.val) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> lowestCommonAncestor(root.left, p, q);
+</span></span><span style="display:flex;"><span>        } <span style="font-weight:bold;text-decoration:underline">else</span> <span style="font-weight:bold;text-decoration:underline">if</span> (root.val &lt; p.val &amp;&amp; root.val &lt; q.val) {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> lowestCommonAncestor(root.right, p, q);
+</span></span><span style="display:flex;"><span>        } <span style="font-weight:bold;text-decoration:underline">else</span> {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> root;
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>}
@@ -218,27 +274,75 @@ In graph theory and computer science, the lowest common ancestor (LCA) (als
 <li><a href="https://leetcode.com/problems/lowest-common-ancestor-of-deepest-leaves/">1123. Lowest Common Ancestor of Deepest Leaves</a></li>
 </ol>
 
-		</section>
+    
+<script src="https://giscus.app/client.js"
+        data-repo=""
+        data-repo-id=""
+        data-category=""
+        data-category-id=""
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="light"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+        </script>
 
-		<div class="post-tags">
-			
-			
-			
-		</div>
-		</article>
-</main>
-<footer>
-  <div style="display:flex"></div>
-  <div class="footer-info">
-    2024  © Lihang Liu |  <a
-      href="https://github.com/athul/archie">Archie Theme</a> | Built with <a href="https://gohugo.io">Hugo</a>
   </div>
-</footer>
-
-
-  
-
 
 </div>
-    </body>
+
+
+      </main>
+    </div>
+
+    <footer>
+      <p>Powered by
+    <a href="https://gohugo.io/">Hugo</a>
+    and
+    <a href="https://github.com/tomfran/typo">tomfran/typo</a>
+</p>
+
+
+    </footer>
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
 </html>

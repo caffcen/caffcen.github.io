@@ -1,145 +1,177 @@
 <!DOCTYPE html>
-<html><head lang="en">
-	<meta charset="utf-8" />
-	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>深入理解 CLH Queue Lock - Lihang Liu&#39;s Homepage</title><meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="description" content="JUC 包中的很多同步原语是基于 AbstractQueuedSynchronizer（以下简称 AQS） 实现的，而 AQS 的实现又是基于 CLH 队列锁（CLH queued lock），因此学习并理解 CLH 队列锁对我们学习 JUC 中的各种同步原语非常有帮助。本文将阐述 CLH 队列锁的实现和原理。
-CLH Queue Lock CLH 队列锁是由 Craig, Landin, Hagersten 三位大佬提出的，因此被称为 CLH 队列锁，它是一种自旋公平锁，基于虚链表实现（virtual linked list）。
-《The Art of Multiprocessor Programming》7.5.2 节给出了 CLH 可能的一种 Java 语言实现：
-public class CLHLock implements Lock { AtomicReference&lt;QNode&gt; tail; ThreadLocal&lt;QNode&gt; myPred; ThreadLocal&lt;QNode&gt; myNode; public CLHLock() { tail = new AtomicReference&lt;QNode&gt;(new QNode()); myNode = new ThreadLocal&lt;QNode&gt;() { protected QNode initialValue() { return new QNode(); } }; myPred = new ThreadLocal&lt;QNode&gt;() { protected QNode initialValue() { return null; } }; } public void lock() { QNode qnode = myNode." />
-	<meta property="og:image" content=""/>
-	<meta property="og:url" content="https://caffcen.github.io/archive/12_clh_queue_lock/">
-  <meta property="og:site_name" content="Lihang Liu&#39;s Homepage">
-  <meta property="og:title" content="深入理解 CLH Queue Lock">
-  <meta property="og:description" content="JUC 包中的很多同步原语是基于 AbstractQueuedSynchronizer（以下简称 AQS） 实现的，而 AQS 的实现又是基于 CLH 队列锁（CLH queued lock），因此学习并理解 CLH 队列锁对我们学习 JUC 中的各种同步原语非常有帮助。本文将阐述 CLH 队列锁的实现和原理。
-CLH Queue Lock CLH 队列锁是由 Craig, Landin, Hagersten 三位大佬提出的，因此被称为 CLH 队列锁，它是一种自旋公平锁，基于虚链表实现（virtual linked list）。
-《The Art of Multiprocessor Programming》7.5.2 节给出了 CLH 可能的一种 Java 语言实现：
-public class CLHLock implements Lock { AtomicReference&lt;QNode&gt; tail; ThreadLocal&lt;QNode&gt; myPred; ThreadLocal&lt;QNode&gt; myNode; public CLHLock() { tail = new AtomicReference&lt;QNode&gt;(new QNode()); myNode = new ThreadLocal&lt;QNode&gt;() { protected QNode initialValue() { return new QNode(); } }; myPred = new ThreadLocal&lt;QNode&gt;() { protected QNode initialValue() { return null; } }; } public void lock() { QNode qnode = myNode.">
-  <meta property="og:locale" content="en-us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="archive">
-    <meta property="article:published_time" content="2023-04-09T16:04:25+08:00">
-    <meta property="article:modified_time" content="2023-04-09T16:04:25+08:00">
-<meta name="twitter:card" content="summary"><meta name="twitter:title" content="深入理解 CLH Queue Lock">
-<meta name="twitter:description" content="JUC 包中的很多同步原语是基于 AbstractQueuedSynchronizer（以下简称 AQS） 实现的，而 AQS 的实现又是基于 CLH 队列锁（CLH queued lock），因此学习并理解 CLH 队列锁对我们学习 JUC 中的各种同步原语非常有帮助。本文将阐述 CLH 队列锁的实现和原理。
-CLH Queue Lock CLH 队列锁是由 Craig, Landin, Hagersten 三位大佬提出的，因此被称为 CLH 队列锁，它是一种自旋公平锁，基于虚链表实现（virtual linked list）。
-《The Art of Multiprocessor Programming》7.5.2 节给出了 CLH 可能的一种 Java 语言实现：
-public class CLHLock implements Lock { AtomicReference&lt;QNode&gt; tail; ThreadLocal&lt;QNode&gt; myPred; ThreadLocal&lt;QNode&gt; myNode; public CLHLock() { tail = new AtomicReference&lt;QNode&gt;(new QNode()); myNode = new ThreadLocal&lt;QNode&gt;() { protected QNode initialValue() { return new QNode(); } }; myPred = new ThreadLocal&lt;QNode&gt;() { protected QNode initialValue() { return null; } }; } public void lock() { QNode qnode = myNode.">
-<script src="https://caffcen.github.io/js/feather.min.js"></script>
-	
-	
-        <link href="https://caffcen.github.io/css/fonts.2c2227b81b1970a03e760aa2e6121cd01f87c88586803cbb282aa224720a765f.css" rel="stylesheet">
-	
+<html lang="en-us"
+  dir="ltr">
 
-	
-	<link rel="stylesheet" type="text/css" media="screen" href="https://caffcen.github.io/css/main.ac08a4c9714baa859217f92f051deb58df2938ec352b506df655005dcaf98cc0.css" />
-		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="https://caffcen.github.io/css/dark.726cd11ca6eb7c4f7d48eb420354f814e5c1b94281aaf8fd0511c1319f7f78a4.css"  disabled />
-	
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
 
-	
-	
+<title>
+    
+    深入理解 CLH Queue Lock | Lihang Liu&#39;s Homepage
+    
+</title>
 
-	
-	
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.css">
-		<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.js"></script>
-		<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
-		
-		
-		<script>
-			document.addEventListener("DOMContentLoaded", function() {
-					renderMathInElement(document.body, {
-							delimiters: [
-									{left: "$$", right: "$$", display: true},
-									{left: "$", right: "$", display: false}
-							]
-					});
-			});
-			</script>
-	
-	
-	
-</head>
-<body>
-        <div class="content"><header>
-	<div class="main">
-		<a href="https://caffcen.github.io/">Lihang Liu&#39;s Homepage</a>
-	</div>
-	<nav>
-		
-		<a href="/">Home</a>
-		
-		<a href="/blog/">Blog</a>
-		
-		<a href="/archive/">Archive</a>
-		
-		| <span id="dark-mode-toggle" onclick="toggleTheme()"></span>
-		<script src="https://caffcen.github.io/js/themetoggle.js"></script>
-		
-	</nav>
-</header>
 
-<main>
-	<article>
-		<div class="title">
-			<h1 class="title">深入理解 CLH Queue Lock</h1>
-			<div class="meta">Posted on Apr 9, 2023</div>
-		</div>
-		
 
-		<section class="body">
-			<p>JUC 包中的很多同步原语是基于 AbstractQueuedSynchronizer（以下简称 AQS） 实现的，而 AQS 的实现又是基于 CLH 队列锁（CLH queued lock），因此学习并理解 CLH 队列锁对我们学习 JUC 中的各种同步原语非常有帮助。本文将阐述 CLH 队列锁的实现和原理。</p>
+<link rel="stylesheet" href="/assets/combined.min.95bd8f25e3a82100ceaab7f49774821700d8d89a2b551df9cd199c4de2d1626f.css" media="all">
+
+
+
+
+  
+
+
+
+  </head>
+
+  
+
+  
+  
+  
+
+  <body class="auto">
+
+    <div class="content">
+      <header>
+        
+
+<div class="header">
+    <h1 class="header-title">Lihang Liu&#39;s Homepage</h1>
+
+    <div class="flex">
+        
+
+        
+        
+        <p class="small ">
+            <a href="/">
+                /Home
+            </a>
+        </p>
+        
+        <p class="small ">
+            <a href="/blog/">
+                /Blog
+            </a>
+        </p>
+        
+        <p class="small ">
+            <a href="/archive/">
+                /Archive
+            </a>
+        </p>
+        
+        
+    </div>
+
+</div>
+      </header>
+
+      <main class="main">
+        
+
+
+
+
+<div class="breadcrumbs">
+    
+    <a href="/">Lihang Liu&#39;s Homepage</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a href="/archive/">Archive</a>
+    <span class="breadcrumbs-separator"> > </span>
+    
+    <a class="breadcrumbs-current" href="/archive/12_clh_queue_lock/">深入理解 CLH Queue Lock</a>
+</div>
+
+
+<div >
+
+  <div class="single-intro-container">
+
+    
+
+    <h1 class="single-title">深入理解 CLH Queue Lock</h1>
+    
+
+    
+
+    <p class="single-readtime">
+      
+      
+      
+      <time datetime="2023-04-09T16:04:25&#43;08:00">April 9, 2023</time>
+      
+
+      
+    </p>
+
+  </div>
+
+  
+
+  
+
+  
+
+  
+
+  <div class="single-content">
+    <p>JUC 包中的很多同步原语是基于 AbstractQueuedSynchronizer（以下简称 AQS） 实现的，而 AQS 的实现又是基于 CLH 队列锁（CLH queued lock），因此学习并理解 CLH 队列锁对我们学习 JUC 中的各种同步原语非常有帮助。本文将阐述 CLH 队列锁的实现和原理。</p>
 <h1 id="clh-queue-lock">CLH Queue Lock</h1>
 <p>CLH 队列锁是由 Craig, Landin, Hagersten 三位大佬提出的，因此被称为 CLH 队列锁，它是一种自旋公平锁，基于虚链表实现（virtual linked list）。</p>
 <p>《The Art of Multiprocessor Programming》7.5.2 节给出了 CLH 可能的一种 Java 语言实现：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CLHLock</span> <span style="color:#66d9ef">implements</span> Lock {
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> <span style="font-weight:bold;font-style:italic;text-decoration:underline">class</span> <span style="color:#666;font-weight:bold;font-style:italic">CLHLock</span> <span style="font-weight:bold;font-style:italic;text-decoration:underline">implements</span> Lock {
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    AtomicReference<span style="color:#f92672">&lt;</span>QNode<span style="color:#f92672">&gt;</span> tail;
-</span></span><span style="display:flex;"><span>    ThreadLocal<span style="color:#f92672">&lt;</span>QNode<span style="color:#f92672">&gt;</span> myPred;
-</span></span><span style="display:flex;"><span>    ThreadLocal<span style="color:#f92672">&lt;</span>QNode<span style="color:#f92672">&gt;</span> myNode;
+</span></span><span style="display:flex;"><span>    AtomicReference&lt;QNode&gt; tail;
+</span></span><span style="display:flex;"><span>    ThreadLocal&lt;QNode&gt; myPred;
+</span></span><span style="display:flex;"><span>    ThreadLocal&lt;QNode&gt; myNode;
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#a6e22e">CLHLock</span>() {
-</span></span><span style="display:flex;"><span>        tail <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> AtomicReference<span style="color:#f92672">&lt;</span>QNode<span style="color:#f92672">&gt;</span>(<span style="color:#66d9ef">new</span> QNode());
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> <span style="color:#666;font-weight:bold;font-style:italic">CLHLock</span>() {
+</span></span><span style="display:flex;"><span>        tail = <span style="font-weight:bold;text-decoration:underline">new</span> AtomicReference&lt;QNode&gt;(<span style="font-weight:bold;text-decoration:underline">new</span> QNode());
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        myNode <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ThreadLocal<span style="color:#f92672">&lt;</span>QNode<span style="color:#f92672">&gt;</span>() {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">protected</span> QNode <span style="color:#a6e22e">initialValue</span>() {
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">new</span> QNode();
+</span></span><span style="display:flex;"><span>        myNode = <span style="font-weight:bold;text-decoration:underline">new</span> ThreadLocal&lt;QNode&gt;() {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;font-style:italic;text-decoration:underline">protected</span> QNode <span style="color:#666;font-weight:bold;font-style:italic">initialValue</span>() {
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold;text-decoration:underline">return</span> <span style="font-weight:bold;text-decoration:underline">new</span> QNode();
 </span></span><span style="display:flex;"><span>            }
 </span></span><span style="display:flex;"><span>        };
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        myPred <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ThreadLocal<span style="color:#f92672">&lt;</span>QNode<span style="color:#f92672">&gt;</span>() {
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">protected</span> QNode <span style="color:#a6e22e">initialValue</span>() {
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">null</span>;
+</span></span><span style="display:flex;"><span>        myPred = <span style="font-weight:bold;text-decoration:underline">new</span> ThreadLocal&lt;QNode&gt;() {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;font-style:italic;text-decoration:underline">protected</span> QNode <span style="color:#666;font-weight:bold;font-style:italic">initialValue</span>() {
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold;text-decoration:underline">return</span> <span style="font-weight:bold;text-decoration:underline">null</span>;
 </span></span><span style="display:flex;"><span>            }
 </span></span><span style="display:flex;"><span>        };
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">lock</span>() {
-</span></span><span style="display:flex;"><span>        QNode qnode <span style="color:#f92672">=</span> myNode.<span style="color:#a6e22e">get</span>();
-</span></span><span style="display:flex;"><span>        qnode.<span style="color:#a6e22e">locked</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span><span style="display:flex;"><span>        QNode pred <span style="color:#f92672">=</span> tail.<span style="color:#a6e22e">getAndSet</span>(qnode);
-</span></span><span style="display:flex;"><span>        myPred.<span style="color:#a6e22e">set</span>(pred);
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">while</span> (pred.<span style="color:#a6e22e">locked</span>) {
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> <span style="font-weight:bold;text-decoration:underline">void</span> <span style="color:#666;font-weight:bold;font-style:italic">lock</span>() {
+</span></span><span style="display:flex;"><span>        QNode qnode = myNode.get();
+</span></span><span style="display:flex;"><span>        qnode.locked = <span style="font-weight:bold;text-decoration:underline">true</span>;
+</span></span><span style="display:flex;"><span>        QNode pred = tail.getAndSet(qnode);
+</span></span><span style="display:flex;"><span>        myPred.set(pred);
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">while</span> (pred.locked) {
 </span></span><span style="display:flex;"><span>        }
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">unlock</span>() {
-</span></span><span style="display:flex;"><span>        QNode qnode <span style="color:#f92672">=</span> myNode.<span style="color:#a6e22e">get</span>();
-</span></span><span style="display:flex;"><span>        qnode.<span style="color:#a6e22e">locked</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>;
-</span></span><span style="display:flex;"><span>        myNode.<span style="color:#a6e22e">set</span>(myPred.<span style="color:#a6e22e">get</span>());
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> <span style="font-weight:bold;text-decoration:underline">void</span> <span style="color:#666;font-weight:bold;font-style:italic">unlock</span>() {
+</span></span><span style="display:flex;"><span>        QNode qnode = myNode.get();
+</span></span><span style="display:flex;"><span>        qnode.locked = <span style="font-weight:bold;text-decoration:underline">false</span>;
+</span></span><span style="display:flex;"><span>        myNode.set(myPred.get());
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">QNode</span> {
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">volatile</span> <span style="color:#66d9ef">boolean</span> locked <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>;
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">class</span> <span style="color:#666;font-weight:bold;font-style:italic">QNode</span> {
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;font-style:italic;text-decoration:underline">volatile</span> <span style="font-weight:bold;text-decoration:underline">boolean</span> locked = <span style="font-weight:bold;text-decoration:underline">false</span>;
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>接下来将会对源码以及其中各个关键技术进行分析。</p>
 <h2 id="数据结构">数据结构</h2>
 <h3 id="qnode">QNode</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">QNode</span> {
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">volatile</span> <span style="color:#66d9ef">boolean</span> locked <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>;
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold;font-style:italic;text-decoration:underline">class</span> <span style="color:#666;font-weight:bold;font-style:italic">QNode</span> {
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic;text-decoration:underline">volatile</span> <span style="font-weight:bold;text-decoration:underline">boolean</span> locked = <span style="font-weight:bold;text-decoration:underline">false</span>;
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p><code>QNode</code> 记录一个线程的同步状态，它只有一个实例字段 <code>locked</code> ，其含义为：</p>
 <ul>
@@ -160,20 +192,20 @@ public class CLHLock implements Lock { AtomicReference&lt;QNode&gt; tail; Thread
 </blockquote>
 <p>CLH 队列是根据线程请求锁的顺序来进行排列的，因此是 First-in-first-out 的，满足公平锁的定义。</p>
 <h2 id="加锁">加锁</h2>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">lock</span>() {
-</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 获取当前线程的 QNode</span>
-</span></span><span style="display:flex;"><span>    QNode qnode <span style="color:#f92672">=</span> myNode.<span style="color:#a6e22e">get</span>();
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 将 myNode.locked 置为 true，表示当前线程想要获取锁</span>
-</span></span><span style="display:flex;"><span>    qnode.<span style="color:#a6e22e">locked</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 通过 tail 获取队列末尾的线程 QNode</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 并且更新 tail 节点指向当前线程，CAS 操作保证原子性</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 现在当前线程排到了队列的末尾</span>
-</span></span><span style="display:flex;"><span>    QNode pred <span style="color:#f92672">=</span> tail.<span style="color:#a6e22e">getAndSet</span>(qnode);
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 设置当前线程的前继节点 myPred</span>
-</span></span><span style="display:flex;"><span>    myPred.<span style="color:#a6e22e">set</span>(pred);
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 在 pred 上忙等待，直到前继节点将其 locked 更新为 flase</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> (pred.<span style="color:#a6e22e">locked</span>) {
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> <span style="font-weight:bold;text-decoration:underline">void</span> <span style="color:#666;font-weight:bold;font-style:italic">lock</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#888;font-style:italic">// 获取当前线程的 QNode</span>
+</span></span><span style="display:flex;"><span>    QNode qnode = myNode.get();
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 将 myNode.locked 置为 true，表示当前线程想要获取锁</span>
+</span></span><span style="display:flex;"><span>    qnode.locked = <span style="font-weight:bold;text-decoration:underline">true</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 通过 tail 获取队列末尾的线程 QNode</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 并且更新 tail 节点指向当前线程，CAS 操作保证原子性</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 现在当前线程排到了队列的末尾</span>
+</span></span><span style="display:flex;"><span>    QNode pred = tail.getAndSet(qnode);
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 设置当前线程的前继节点 myPred</span>
+</span></span><span style="display:flex;"><span>    myPred.set(pred);
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 在 pred 上忙等待，直到前继节点将其 locked 更新为 flase</span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;text-decoration:underline">while</span> (pred.locked) {
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>一个线程获取锁的步骤可以总结为：</p>
@@ -183,14 +215,14 @@ public class CLHLock implements Lock { AtomicReference&lt;QNode&gt; tail; Thread
 <li>在前继节点 <code>myPred</code> 的 <code>QNode</code> 上进行忙等待，直到前继节点释放锁为止。</li>
 </ol>
 <h2 id="解锁">解锁</h2>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">unlock</span>() {
-</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 获取当前线程 QNode</span>
-</span></span><span style="display:flex;"><span>    QNode qnode <span style="color:#f92672">=</span> myNode.<span style="color:#a6e22e">get</span>();
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 将其置为 false，表示当前线程离开临界区，并释放锁</span>
-</span></span><span style="display:flex;"><span>    qnode.<span style="color:#a6e22e">locked</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 循环利用 QNode，且防止该线程下次加锁时发生死锁</span>
-</span></span><span style="display:flex;"><span>    myNode.<span style="color:#a6e22e">set</span>(myPred.<span style="color:#a6e22e">get</span>());
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> <span style="font-weight:bold;text-decoration:underline">void</span> <span style="color:#666;font-weight:bold;font-style:italic">unlock</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#888;font-style:italic">// 获取当前线程 QNode</span>
+</span></span><span style="display:flex;"><span>    QNode qnode = myNode.get();
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 将其置为 false，表示当前线程离开临界区，并释放锁</span>
+</span></span><span style="display:flex;"><span>    qnode.locked = <span style="font-weight:bold;text-decoration:underline">false</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 循环利用 QNode，且防止该线程下次加锁时发生死锁</span>
+</span></span><span style="display:flex;"><span>    myNode.set(myPred.get());
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>线程解锁的步骤可以总结为：</p>
 <ol>
@@ -200,32 +232,44 @@ public class CLHLock implements Lock { AtomicReference&lt;QNode&gt; tail; Thread
 </ol>
 <h3 id="死锁的可能性以及-qnode-的回收利用">死锁的可能性以及 QNode 的回收利用</h3>
 <p>可能有读者会奇怪这里为什么需要更新 <code>myNode</code> 引用，能不能不更新 <code>myNode</code> 引用，直接从方法调用中返回呢？</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">unlock</span>() {
-</span></span><span style="display:flex;"><span>    QNode qnode <span style="color:#f92672">=</span> myNode.<span style="color:#a6e22e">get</span>();
-</span></span><span style="display:flex;"><span>    qnode.<span style="color:#a6e22e">locked</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 不更新 myNode 引用直接返回</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// myNode.set(myPred.get());</span>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> <span style="font-weight:bold;text-decoration:underline">void</span> <span style="color:#666;font-weight:bold;font-style:italic">unlock</span>() {
+</span></span><span style="display:flex;"><span>    QNode qnode = myNode.get();
+</span></span><span style="display:flex;"><span>    qnode.locked = <span style="font-weight:bold;text-decoration:underline">false</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 不更新 myNode 引用直接返回</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// myNode.set(myPred.get());</span>
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>如果不更新 <code>myNode</code> 对象，那么可能会出现如下的情况：</p>
-<p><img src="Pasted%20image%2020230409152218.png" alt=""></p>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" Pasted%20image%2020230409152218.png">
+</figure></p>
 <p>假设整个 CLH 队列中只有一个线程，它能够立刻获得锁（因为没有前继节点持有锁）并进入临界区。它在执行完临界区工作后释放了锁，将自己的 <code>QNode</code> 置为 <code>flase</code> ，那么将变成下图的情况：</p>
-<p><img src="Pasted%20image%2020230409152556.png" alt=""></p>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" Pasted%20image%2020230409152556.png">
+</figure></p>
 <p>之后，该线程立刻再次尝试获取锁，这个时候，CLH 队列的情况和上图是一致的，因为我们在解锁时没有更新 <code>myNode</code> 引用，那么 <code>tail</code> 节点和该线程的 <code>myNode</code> 节点指向的是同一个内存对象。那么考虑该线程重新尝试加锁时会发生什么：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">lock</span>() {
-</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// qnode 即为上次加锁、解锁中使用的 QNode 数据结构</span>
-</span></span><span style="display:flex;"><span>    QNode qnode <span style="color:#f92672">=</span> myNode.<span style="color:#a6e22e">get</span>();
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 将 myNode.locked 置为 true</span>
-</span></span><span style="display:flex;"><span>    qnode.<span style="color:#a6e22e">locked</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">true</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 通过 tail 获取队列末尾的线程 QNode，tail 此时指向的对象既为该线程自己的 myNode</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 也就是上上条语句 QNode qnode = myNode.get(); 拿到的 QNode 引用</span>
-</span></span><span style="display:flex;"><span>    QNode pred <span style="color:#f92672">=</span> tail.<span style="color:#a6e22e">getAndSet</span>(qnode);
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 设置当前线程的前继节点 myPred，这个时候 myPred 指向了 myNode</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 也就是说该线程的前继线程是自己，明显是错误的</span>
-</span></span><span style="display:flex;"><span>    myPred.<span style="color:#a6e22e">set</span>(pred);
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// pred.locked == myNode.locked &amp;&amp; myNode.locked == true，死锁</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> (pred.<span style="color:#a6e22e">locked</span>) {
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold;font-style:italic;text-decoration:underline">public</span> <span style="font-weight:bold;text-decoration:underline">void</span> <span style="color:#666;font-weight:bold;font-style:italic">lock</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#888;font-style:italic">// qnode 即为上次加锁、解锁中使用的 QNode 数据结构</span>
+</span></span><span style="display:flex;"><span>    QNode qnode = myNode.get();
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 将 myNode.locked 置为 true</span>
+</span></span><span style="display:flex;"><span>    qnode.locked = <span style="font-weight:bold;text-decoration:underline">true</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 通过 tail 获取队列末尾的线程 QNode，tail 此时指向的对象既为该线程自己的 myNode</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 也就是上上条语句 QNode qnode = myNode.get(); 拿到的 QNode 引用</span>
+</span></span><span style="display:flex;"><span>    QNode pred = tail.getAndSet(qnode);
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 设置当前线程的前继节点 myPred，这个时候 myPred 指向了 myNode</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// 也就是说该线程的前继线程是自己，明显是错误的</span>
+</span></span><span style="display:flex;"><span>    myPred.set(pred);
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic">// pred.locked == myNode.locked &amp;&amp; myNode.locked == true，死锁</span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;text-decoration:underline">while</span> (pred.locked) {
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>通过注释可以清晰地看到，因为 <code>tail</code> 指向了想要重新获取锁的这条线程，那么这个线程的 <code>myNode</code> 和 <code>myPred</code> 将指向同一个对象，最终将永远忙等待下去。这也就是为什么我们需要在解锁时更新 <code>myNode</code> 的原因，这是为了让同一个线程再次加锁时不发生死锁而必要的一个操作。</p>
@@ -248,27 +292,75 @@ public class CLHLock implements Lock { AtomicReference&lt;QNode&gt; tail; Thread
 <li><a href="https://gee.cs.oswego.edu/dl/papers/aqs.pdf">https://gee.cs.oswego.edu/dl/papers/aqs.pdf</a></li>
 </ol>
 
-		</section>
+    
+<script src="https://giscus.app/client.js"
+        data-repo=""
+        data-repo-id=""
+        data-category=""
+        data-category-id=""
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="top"
+        data-theme="light"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+        </script>
 
-		<div class="post-tags">
-			
-			
-			
-		</div>
-		</article>
-</main>
-<footer>
-  <div style="display:flex"></div>
-  <div class="footer-info">
-    2024  © Lihang Liu |  <a
-      href="https://github.com/athul/archie">Archie Theme</a> | Built with <a href="https://gohugo.io">Hugo</a>
   </div>
-</footer>
-
-
-  
-
 
 </div>
-    </body>
+
+
+      </main>
+    </div>
+
+    <footer>
+      <p>Powered by
+    <a href="https://gohugo.io/">Hugo</a>
+    and
+    <a href="https://github.com/tomfran/typo">tomfran/typo</a>
+</p>
+
+
+    </footer>
+
+  </body>
+
+  <script>
+
+  function isAuto() {
+    return document.body.classList.contains("auto");
+  }
+
+  function setTheme() {
+    if (!isAuto()) {
+      return
+    }
+
+    document.body.classList.remove("auto");
+    let cls = "light";
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      cls = "dark";
+    }
+
+    document.body.classList.add(cls);
+  }
+
+  function invertBody() {
+    document.body.classList.toggle("dark");
+    document.body.classList.toggle("light");
+  }
+
+  if (isAuto()) {
+    window.matchMedia('(prefers-color-scheme: dark)').addListener(invertBody);
+  }
+
+  setTheme();
+
+</script>
+
 </html>
