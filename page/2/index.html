@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+	<head lang="en">
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>Lihang Liu&#39;s Homepage | Home </title><meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="" />
+	<meta property="og:image" content=""/>
+	<link rel="alternate" type="application/rss+xml" href="https://caffcen.github.io/index.xml" title="Lihang Liu's Homepage" />
+	<meta property="og:url" content="https://caffcen.github.io/">
+  <meta property="og:site_name" content="Lihang Liu&#39;s Homepage">
+  <meta property="og:title" content="Lihang Liu&#39;s Homepage">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="website">
+<meta name="twitter:card" content="summary"><meta name="twitter:title" content="Lihang Liu&#39;s Homepage">
+<meta name="twitter:description" content="">
+<script src="https://caffcen.github.io/js/feather.min.js"></script>
+	
+	
+        <link href="https://caffcen.github.io/css/fonts.2c2227b81b1970a03e760aa2e6121cd01f87c88586803cbb282aa224720a765f.css" rel="stylesheet">
+	
+
+	
+	<link rel="stylesheet" type="text/css" media="screen" href="https://caffcen.github.io/css/main.ac08a4c9714baa859217f92f051deb58df2938ec352b506df655005dcaf98cc0.css" />
+		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="https://caffcen.github.io/css/dark.726cd11ca6eb7c4f7d48eb420354f814e5c1b94281aaf8fd0511c1319f7f78a4.css"  disabled />
+	
+
+	
+	
+
+	
+	
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.css">
+		<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.js"></script>
+		<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+		
+		
+		<script>
+			document.addEventListener("DOMContentLoaded", function() {
+					renderMathInElement(document.body, {
+							delimiters: [
+									{left: "$$", right: "$$", display: true},
+									{left: "$", right: "$", display: false}
+							]
+					});
+			});
+			</script>
+	
+	
+	
+</head>
+
+	<body>
+		<div class="content">
+			<header>
+	<div class="main">
+		<a href="https://caffcen.github.io/">Lihang Liu&#39;s Homepage</a>
+	</div>
+	<nav>
+		
+		<a href="/">Home</a>
+		
+		<a href="/blog/">Blog</a>
+		
+		<a href="/archive/">Archive</a>
+		
+		| <span id="dark-mode-toggle" onclick="toggleTheme()"></span>
+		<script src="https://caffcen.github.io/js/themetoggle.js"></script>
+		
+	</nav>
+</header>
+
+			
+			<main class="list">
+				<div class="site-description"><p>As a senior software engineer with 2.5 years of experience, I am enthusiastic about distributed systems, computer networking, databases, and of course, coding. I plan to pursue my PhD degree in Computer Science to further deepen my knowledge and skills in this discipline.</p></div>
+				
+				
+				
+				<section class="list-item">
+					<h1 class="title"><a href="/archive/8_leetcode_note_4_binary_search/">LeetCode 笔记 4：Binary Search 的5种变体应用</a></h1>
+					<time>Mar 12, 2023</time>
+					<br><div class="description">
+	
+	二分查找在算法题目中是十分常见的一类题目，但这类题目往往要求二分查找找出解集中的第一个、最后一个解，这个时候通常的二分查找算法就无法直接套用了。
+本文将列举 5 种二分查找的变体应用，它们分别是：
+Contains，是否包含目标 Index of first occurrence of a key，目标第一次出现的下标 Index of last occurrence of a key，目标最后一次出现的下标 Index of least element greater than (or equal) to key，最小的大于（或大于等于）目标的下标 Index of greatest element less than (or equal to) key，最大的小于（或小于等于）目标的下标 之后会更新几篇文章针对不同类型的题目进行分析。
+这 5 中变体算法的代码如下：
+class BinarySearch { /** * 是否包含 key * * @param nums 输入数组 * @param key 目标 * @return true 包含；false 不包含 */ public static boolean contains(int[] nums, int key) { int low = 0, high = nums.&hellip;
+	
+</div>
+					<a class="readmore" href="/archive/8_leetcode_note_4_binary_search/">Read more ⟶</a>
+				</section>
+				
+				<section class="list-item">
+					<h1 class="title"><a href="/archive/7_mysql_innodb_bin_redo_undo_log/">MySQL InnoDB Bin Log, Redo Log, Undo Log 详解</a></h1>
+					<time>Feb 26, 2023</time>
+					<br><div class="description">
+	
+	Bin log，Redo log 以及 Undo log 是 MySQL 以及 InnoDB 中较为重要的 3 中日志文件，它们帮助实现了本地事务的原子性以及持久性，同时还是复制、MVCC 等功能必不可少的组成部分。
+Bin Log The binary log contains “events” that describe database changes such as table creation operations or changes to table data.
+Bin log 记录所有对于 MySQL 执行的更改操作（包括不同存储引擎相关的操作），不记录 SELECT 和 SHOW 这类不修改数据库的操作。Bin log 产生于 MySQL 数据库上层，任何存储引擎对于数据库的更改都会产生 Bin log，包括 InnoDB、MyISAM、Heap 等任何存储引擎的⽇志。
+Bin log 是逻辑日志，记录的是 SQL 语句。
+Bin log 的作用 Bin log 的作用主要是：
+恢复：数据库恢复阶段，某些数据的恢复依赖于二进制日志 复制（replication）：MySQL 集群间的同步是将 bin log 中记录的数据更改复制给其它节点实现的。 From official doc MySQL :: MySQL 8.&hellip;
+	
+</div>
+					<a class="readmore" href="/archive/7_mysql_innodb_bin_redo_undo_log/">Read more ⟶</a>
+				</section>
+				
+				<section class="list-item">
+					<h1 class="title"><a href="/archive/6_leetcode_note_3_construct_bst_from_xxx_traversal/">LeetCode 笔记 3：Construct Binary Tree from xxx Traversal</a></h1>
+					<time>Feb 26, 2023</time>
+					<br><div class="description">
+	
+	这一类题目（具体题目可以参考文末的链接）要求我们从 inorder, preorder 及 postorder traversal 其中的两个构建出二叉树，之所以能够通过这三种遍历方式中的两个就构建出整棵二叉树，是因为任意两种遍历方式都能够帮助我们递归地找出当前 subroot 的 left 和 right subtree 的范围。而这要从这三种遍历方式的特点说起：
+class TreeNode { int val; TreeNode left; TreeNode right; TreeNode() { } TreeNode(int val) { this.val = val; } TreeNode(int val, TreeNode left, TreeNode right) { this.val = val; this.left = left; this.right = right; } public static void preorder(TreeNode root, List&lt;Integer&gt; list) { if (root == null) { return; } list.add(root.val); preorder(root.left, list); preorder(root.right, list); } public static void postorder(TreeNode root, List&lt;Integer&gt; list) { if (root == null) { return; } postorder(root.&hellip;
+	
+</div>
+					<a class="readmore" href="/archive/6_leetcode_note_3_construct_bst_from_xxx_traversal/">Read more ⟶</a>
+				</section>
+				
+				<section class="list-item">
+					<h1 class="title"><a href="/archive/5_leetcode_note_2_lca/">LeetCode 笔记 2：Binary Tree Lowest Common Ancestor</a></h1>
+					<time>Feb 19, 2023</time>
+					<br><div class="description">
+	
+	Loweset Common Ancestor From wikipedia Lowest common ancestor - Wikipedia:
+In graph theory and computer science, the lowest common ancestor (LCA) (also called least common ancestor) of two nodes v and w in a [tree]( https://en.wikipedia.org/wiki/Tree_ (graph_theory) &ldquo;Tree (graph theory)&quot;) or directed acyclic graph (DAG) T is the lowest (i.e. deepest) node that has both v and w as descendants, where we define each node to be a descendant of itself (so if v has a direct connection from w, w is the lowest common ancestor).&hellip;
+	
+</div>
+					<a class="readmore" href="/archive/5_leetcode_note_2_lca/">Read more ⟶</a>
+				</section>
+				
+				<section class="list-item">
+					<h1 class="title"><a href="/archive/4_implement_atomic_and_durable/">本地事务的原子性和持久性是如何实现的</a></h1>
+					<time>Feb 19, 2023</time>
+					<br><div class="description">
+	
+	要实现持久性，数据库事务的修改必须要写入到磁盘中，否则，当出现数据库异常退出、系统宕机、机房断电等意外情况时，位于内存中的所有数据将会丢失。
+但是，磁盘的操作又不是一个原子性行为，数据库可能在写入前、写入后、正在写等状态发生异常，这就需要我们采取一定的手段来保证事务的原子性。
+目前的数据库管理系统采用的是先写日志、再写磁盘的策略来保证事务的原子性以及持久性的。本文将阐述 Commit Logging、Shadow Paging 以及 Write-Ahead Logging 三种策略。
+Commit Logging Commit logging 是一种事务实现方式。在将数据修改写到磁盘之前，先把事务操作所需要的所有信息（包括修改什么数据、数据物理上位于哪个内存页和磁盘块中、从什么值改成什么值，等等）以日志的形式写到文件中。
+只有日志记录全部写入到了磁盘之中后（日记文件也需要持久化到磁盘中），才会根据日志记录中记录的信息将修改写入到磁盘。
+一个事务成功提交会，会在日志记录中添加上 Commit Record ，表示事务已经成功提交。在讲事务的修改成功写入到磁盘中后，还会在添加上一条 End Record 用来标识磁盘写入成功。
+Commit Logging 如何保证持久性和原子性 一旦事务在日志记录中写入了 Commit Record ，那么该事务的所有修改已经全部安全落盘，那么，即便数据库在讲事务的修改写入到磁盘的过程中异常退出，在数据库系统重启恢复阶段，也能够将未完成的写入继续做完，这保证了事务的持久性。
+如果 DBMS 在将一个事务的 Commit Record 安全写入到日志文件之前就异常终止，那么，只需要在 DBMS 重启恢复阶段，回滚该事务的所有变更的写入操作即可，这保证了事务的原子性，不会存在中间状态。
+Commit Logging 的缺陷 Commit Logging 的缺陷在于，在事务讲修改更新操作完全写入日志记录文件之前，无法讲修改写到磁盘之中，日志文件的修改和磁盘的修改变成了同步的操作。如果在日志文件写入的同时磁盘处于空闲状态，那么将会导致磁盘资源的空置和浪费。
+Shadow Paging Shadow paging 是另一个实现事务原子性以及持久性的技术。它是基于 Copy-on-Write 的方法。
+Shadow paging 是这样工作的：
+在事务修改一个数据页之前，将会复制一份该数据页的副本，该副本即为原数据页的影子 shadow。 所有的修改将会作用于影子页，因为影子页没有被位于磁盘中的任何数据页所引用，因此它的修改是十分安全的，不会影响一致性。 当影子页准备被持久化的时候，磁盘中所有引用原数据页的指针将被指向影子页。 最后一步的指针修改可以认为是原子性的，现在磁盘在硬件上保证了不会出现改了『半个值』的情况。 Shadow Paging 的缺点 Shadow paging 的实现要比 Commit Logging 更加简单，但只要涉及到并发锁时，Shadow Paging 所能够处理的并发事务数量将成为一个瓶颈。&hellip;
+	
+</div>
+					<a class="readmore" href="/archive/4_implement_atomic_and_durable/">Read more ⟶</a>
+				</section>
+				
+				
+
+<ul class="pagination">
+	<span class="page-item page-prev">
+	
+    <a href="/" class="page-link" aria-label="Previous"><span aria-hidden="true">← Prev</span></a>
+	
+	</span>
+	<span class="page-item page-next">
+	
+    <a href="/page/3/" class="page-link" aria-label="Next"><span aria-hidden="true">Next →</span></a>
+	
+	</span>
+</ul>
+
+
+			</main>
+			<footer>
+  <div style="display:flex"></div>
+  <div class="footer-info">
+    2024  © Lihang Liu |  <a
+      href="https://github.com/athul/archie">Archie Theme</a> | Built with <a href="https://gohugo.io">Hugo</a>
+  </div>
+</footer>
+
+
+  
+
+
+
+		</div>
+		
+	</body>
+</html>

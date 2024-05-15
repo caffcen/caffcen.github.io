@@ -1,20 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Archives on Lihang Liu&#39;s Homepage</title>
+    <title>Archive on Lihang Liu&#39;s Homepage</title>
     <link>https://caffcen.github.io/archive/</link>
-    <description>Recent content in Archives on Lihang Liu&#39;s Homepage</description>
+    <description>Recent content in Archive on Lihang Liu&#39;s Homepage</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 02 Apr 2024 16:04:13 +0800</lastBuildDate>
+    <copyright>© Lihang Liu</copyright>
+    <lastBuildDate>Sun, 21 May 2023 16:04:33 +0800</lastBuildDate>
     <atom:link href="https://caffcen.github.io/archive/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>LeetCode 笔记 5：Search in Rotated Sorted Array</title>
-      <link>https://caffcen.github.io/archive/11_leetcode_note_5_search_in_rotated_sorted_array/</link>
-      <pubDate>Tue, 02 Apr 2024 16:04:13 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/11_leetcode_note_5_search_in_rotated_sorted_array/</guid>
-      <description>今天要讲的题目都使用到了二分查找（或者和二分查找紧密相关），同时又都是基于一个 Rotated Sorted Array。那么先从 Rotated Sorted Array 的特点讲起吧。&#xA;Rotated Sorted Array 的定义是这样子的：&#xA;There is an integer array nums sorted in ascending order (with distinct values). nums is possibly rotated at an unknown pivot index k (1 &amp;lt;= k &amp;lt; nums.length) such that the resulting array is [nums[k], nums[k+1], ..., nums[n-1], nums[0], nums[1], ..., nums[k-1]] (0-indexed).&#xA;就拿 int[] nums = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}; 举例好了，如果 nums 在 nums[4] 位置进行旋转，那么它将变成： {4, 5, 6, 7, 8, 9, 10, 0, 1, 2, 3} ，那么我们能够观察到几个特性：</description>
-    </item>
     <item>
       <title>AbstractQueuedSynchronizer 简介</title>
       <link>https://caffcen.github.io/archive/13_aqs_intro/</link>
@@ -28,6 +22,13 @@
       <pubDate>Sun, 09 Apr 2023 16:04:25 +0800</pubDate>
       <guid>https://caffcen.github.io/archive/12_clh_queue_lock/</guid>
       <description>JUC 包中的很多同步原语是基于 AbstractQueuedSynchronizer（以下简称 AQS） 实现的，而 AQS 的实现又是基于 CLH 队列锁（CLH queued lock），因此学习并理解 CLH 队列锁对我们学习 JUC 中的各种同步原语非常有帮助。本文将阐述 CLH 队列锁的实现和原理。&#xA;CLH Queue Lock CLH 队列锁是由 Craig, Landin, Hagersten 三位大佬提出的，因此被称为 CLH 队列锁，它是一种自旋公平锁，基于虚链表实现（virtual linked list）。&#xA;《The Art of Multiprocessor Programming》7.5.2 节给出了 CLH 可能的一种 Java 语言实现：&#xA;public class CLHLock implements Lock { AtomicReference&amp;lt;QNode&amp;gt; tail; ThreadLocal&amp;lt;QNode&amp;gt; myPred; ThreadLocal&amp;lt;QNode&amp;gt; myNode; public CLHLock() { tail = new AtomicReference&amp;lt;QNode&amp;gt;(new QNode()); myNode = new ThreadLocal&amp;lt;QNode&amp;gt;() { protected QNode initialValue() { return new QNode(); } }; myPred = new ThreadLocal&amp;lt;QNode&amp;gt;() { protected QNode initialValue() { return null; } }; } public void lock() { QNode qnode = myNode.</description>
+    </item>
+    <item>
+      <title>LeetCode 笔记 5：Search in Rotated Sorted Array</title>
+      <link>https://caffcen.github.io/archive/11_leetcode_note_5_search_in_rotated_sorted_array/</link>
+      <pubDate>Sun, 02 Apr 2023 16:04:13 +0800</pubDate>
+      <guid>https://caffcen.github.io/archive/11_leetcode_note_5_search_in_rotated_sorted_array/</guid>
+      <description>今天要讲的题目都使用到了二分查找（或者和二分查找紧密相关），同时又都是基于一个 Rotated Sorted Array。那么先从 Rotated Sorted Array 的特点讲起吧。&#xA;Rotated Sorted Array 的定义是这样子的：&#xA;There is an integer array nums sorted in ascending order (with distinct values). nums is possibly rotated at an unknown pivot index k (1 &amp;lt;= k &amp;lt; nums.length) such that the resulting array is [nums[k], nums[k+1], ..., nums[n-1], nums[0], nums[1], ..., nums[k-1]] (0-indexed).&#xA;就拿 int[] nums = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}; 举例好了，如果 nums 在 nums[4] 位置进行旋转，那么它将变成： {4, 5, 6, 7, 8, 9, 10, 0, 1, 2, 3} ，那么我们能够观察到几个特性：</description>
     </item>
     <item>
       <title>深入理解 B&#43; Tree</title>

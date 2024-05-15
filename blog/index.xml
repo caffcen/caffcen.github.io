@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Blog on Lihang Liu&#39;s Homepage</title>
+    <link>https://caffcen.github.io/blog/</link>
+    <description>Recent content in Blog on Lihang Liu&#39;s Homepage</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <copyright>© Lihang Liu</copyright>
+    <lastBuildDate>Wed, 15 May 2024 17:04:00 +0800</lastBuildDate>
+    <atom:link href="https://caffcen.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>1_langchain_ai_agent_framework</title>
+      <link>https://caffcen.github.io/blog/1_langchain_ai_agent_framework/</link>
+      <pubDate>Wed, 15 May 2024 17:04:00 +0800</pubDate>
+      <guid>https://caffcen.github.io/blog/1_langchain_ai_agent_framework/</guid>
+      <description>Placeholder</description>
+    </item>
+  </channel>
+</rss>

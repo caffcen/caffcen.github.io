@@ -1,44 +1,14 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    
-    <title>深入理解 B&#43; Tree | Lihang Liu&#39;s Homepage</title>
-    <meta name="viewport" content="width=device-width,minimum-scale=1">
-    <meta name="description" content="B&#43; 树的定义和 B 树是类似的，B&#43; 树在数据结构上进行了一定的改进，它的特性使得它的某些场景下教 B 树有了显著的优势。本文笔者将对 B&#43; 树的定义、特点以及应用进行详细解析。
+<html><head lang="en">
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"><title>深入理解 B&#43; Tree - Lihang Liu&#39;s Homepage</title><meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="B&#43; 树的定义和 B 树是类似的，B&#43; 树在数据结构上进行了一定的改进，它的特性使得它的某些场景下教 B 树有了显著的优势。本文笔者将对 B&#43; 树的定义、特点以及应用进行详细解析。
 定义 B&#43; 树和 B 树的定义是类似的，它们都是平衡多路搜索树，在文件系统和数据库系统中都有大量的应用。只不过 B&#43; 树有以下几点独特的属性：
 B&#43; 树的非叶子结点不包含值（value），只存储键（key） B&#43; 树的叶子结点之间是互相连接的，B&#43; 树叶子结点这一层构成了一个双向链表（Doubly linked list） B&#43; 树的叶子结点这一层存储了所有数据的 key-links pairs，而 B 树的所有数据是散布在整棵树中的，B 树的叶子结点这一层只存储了数据全集的一部分。 B&#43; 树的查找、添加、删除算法和 B 树是类似的，可以参考笔者的上一篇博客进行了解：深入理解 B-Tree | caffcen&rsquo;s blog，在此不在赘述。
 特性 对于阶数为 m 的 B&#43; 树，它拥有如下性质：
-每个节点最多有 m 个子节点。 每个节点最多有 m-1 个键值。 每个内部节点至少有 ⌈m/2⌉ 个子节点，根节点除外。 根节点至少有 2 个子节点。 所有叶子节点出现在同一层级上，叶子结点与叶子结点之间有双向引用，叶子结点这一层构成了一条双向链表。 一个具有 k 个子节点的非叶节点包含 k-1 个键值。 叶子结点这一层存储了所有数据（所有的 key-link pairs） B-Tree vs. B&#43; Tree B 树和 B&#43; 树的区别对比，可以参考 Stack Overflow 这个问题：database - What are the differences between B trees and B&#43; trees?">
-    <meta name="generator" content="Hugo 0.125.7">
-    
-    
-    
-    
-      <meta name="robots" content="noindex, nofollow">
-    
-    
-
-    
-<link rel="stylesheet" href="/ananke/css/main.min.css" >
-
-
-
-    
-
-    
-      
-
-    
-
-    
-
-    
-      <link rel="canonical" href="https://caffcen.github.io/archive/10_b&#43;tree/">
-    
-
-    <meta property="og:url" content="https://caffcen.github.io/archive/10_b&#43;tree/">
+每个节点最多有 m 个子节点。 每个节点最多有 m-1 个键值。 每个内部节点至少有 ⌈m/2⌉ 个子节点，根节点除外。 根节点至少有 2 个子节点。 所有叶子节点出现在同一层级上，叶子结点与叶子结点之间有双向引用，叶子结点这一层构成了一条双向链表。 一个具有 k 个子节点的非叶节点包含 k-1 个键值。 叶子结点这一层存储了所有数据（所有的 key-link pairs） B-Tree vs. B&#43; Tree B 树和 B&#43; 树的区别对比，可以参考 Stack Overflow 这个问题：database - What are the differences between B trees and B&#43; trees?" />
+	<meta property="og:image" content=""/>
+	<meta property="og:url" content="https://caffcen.github.io/archive/10_b&#43;tree/">
   <meta property="og:site_name" content="Lihang Liu&#39;s Homepage">
   <meta property="og:title" content="深入理解 B&#43; Tree">
   <meta property="og:description" content="B&#43; 树的定义和 B 树是类似的，B&#43; 树在数据结构上进行了一定的改进，它的特性使得它的某些场景下教 B 树有了显著的优势。本文笔者将对 B&#43; 树的定义、特点以及应用进行详细解析。
@@ -51,94 +21,76 @@ B&#43; 树的非叶子结点不包含值（value），只存储键（key） B&#4
     <meta property="article:section" content="archive">
     <meta property="article:published_time" content="2023-03-26T16:04:04+08:00">
     <meta property="article:modified_time" content="2023-03-26T16:04:04+08:00">
-
-  <meta itemprop="name" content="深入理解 B&#43; Tree">
-  <meta itemprop="description" content="B&#43; 树的定义和 B 树是类似的，B&#43; 树在数据结构上进行了一定的改进，它的特性使得它的某些场景下教 B 树有了显著的优势。本文笔者将对 B&#43; 树的定义、特点以及应用进行详细解析。
-定义 B&#43; 树和 B 树的定义是类似的，它们都是平衡多路搜索树，在文件系统和数据库系统中都有大量的应用。只不过 B&#43; 树有以下几点独特的属性：
-B&#43; 树的非叶子结点不包含值（value），只存储键（key） B&#43; 树的叶子结点之间是互相连接的，B&#43; 树叶子结点这一层构成了一个双向链表（Doubly linked list） B&#43; 树的叶子结点这一层存储了所有数据的 key-links pairs，而 B 树的所有数据是散布在整棵树中的，B 树的叶子结点这一层只存储了数据全集的一部分。 B&#43; 树的查找、添加、删除算法和 B 树是类似的，可以参考笔者的上一篇博客进行了解：深入理解 B-Tree | caffcen&rsquo;s blog，在此不在赘述。
-特性 对于阶数为 m 的 B&#43; 树，它拥有如下性质：
-每个节点最多有 m 个子节点。 每个节点最多有 m-1 个键值。 每个内部节点至少有 ⌈m/2⌉ 个子节点，根节点除外。 根节点至少有 2 个子节点。 所有叶子节点出现在同一层级上，叶子结点与叶子结点之间有双向引用，叶子结点这一层构成了一条双向链表。 一个具有 k 个子节点的非叶节点包含 k-1 个键值。 叶子结点这一层存储了所有数据（所有的 key-link pairs） B-Tree vs. B&#43; Tree B 树和 B&#43; 树的区别对比，可以参考 Stack Overflow 这个问题：database - What are the differences between B trees and B&#43; trees?">
-  <meta itemprop="datePublished" content="2023-03-26T16:04:04+08:00">
-  <meta itemprop="dateModified" content="2023-03-26T16:04:04+08:00">
-  <meta itemprop="wordCount" content="257"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="深入理解 B&#43; Tree">
+<meta name="twitter:card" content="summary"><meta name="twitter:title" content="深入理解 B&#43; Tree">
 <meta name="twitter:description" content="B&#43; 树的定义和 B 树是类似的，B&#43; 树在数据结构上进行了一定的改进，它的特性使得它的某些场景下教 B 树有了显著的优势。本文笔者将对 B&#43; 树的定义、特点以及应用进行详细解析。
 定义 B&#43; 树和 B 树的定义是类似的，它们都是平衡多路搜索树，在文件系统和数据库系统中都有大量的应用。只不过 B&#43; 树有以下几点独特的属性：
 B&#43; 树的非叶子结点不包含值（value），只存储键（key） B&#43; 树的叶子结点之间是互相连接的，B&#43; 树叶子结点这一层构成了一个双向链表（Doubly linked list） B&#43; 树的叶子结点这一层存储了所有数据的 key-links pairs，而 B 树的所有数据是散布在整棵树中的，B 树的叶子结点这一层只存储了数据全集的一部分。 B&#43; 树的查找、添加、删除算法和 B 树是类似的，可以参考笔者的上一篇博客进行了解：深入理解 B-Tree | caffcen&rsquo;s blog，在此不在赘述。
 特性 对于阶数为 m 的 B&#43; 树，它拥有如下性质：
 每个节点最多有 m 个子节点。 每个节点最多有 m-1 个键值。 每个内部节点至少有 ⌈m/2⌉ 个子节点，根节点除外。 根节点至少有 2 个子节点。 所有叶子节点出现在同一层级上，叶子结点与叶子结点之间有双向引用，叶子结点这一层构成了一条双向链表。 一个具有 k 个子节点的非叶节点包含 k-1 个键值。 叶子结点这一层存储了所有数据（所有的 key-link pairs） B-Tree vs. B&#43; Tree B 树和 B&#43; 树的区别对比，可以参考 Stack Overflow 这个问题：database - What are the differences between B trees and B&#43; trees?">
+<script src="https://caffcen.github.io/js/feather.min.js"></script>
+	
+	
+        <link href="https://caffcen.github.io/css/fonts.2c2227b81b1970a03e760aa2e6121cd01f87c88586803cbb282aa224720a765f.css" rel="stylesheet">
+	
 
 	
-  </head>
+	<link rel="stylesheet" type="text/css" media="screen" href="https://caffcen.github.io/css/main.ac08a4c9714baa859217f92f051deb58df2938ec352b506df655005dcaf98cc0.css" />
+		<link id="darkModeStyle" rel="stylesheet" type="text/css" href="https://caffcen.github.io/css/dark.726cd11ca6eb7c4f7d48eb420354f814e5c1b94281aaf8fd0511c1319f7f78a4.css"  disabled />
+	
 
-  <body class="ma0 avenir bg-near-white">
+	
+	
 
-    
-   
-  
+	
+	
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.css">
+		<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.js"></script>
+		<script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+		
+		
+		<script>
+			document.addEventListener("DOMContentLoaded", function() {
+					renderMathInElement(document.body, {
+							delimiters: [
+									{left: "$$", right: "$$", display: true},
+									{left: "$", right: "$", display: false}
+							]
+					});
+			});
+			</script>
+	
+	
+	
+</head>
+<body>
+        <div class="content"><header>
+	<div class="main">
+		<a href="https://caffcen.github.io/">Lihang Liu&#39;s Homepage</a>
+	</div>
+	<nav>
+		
+		<a href="/">Home</a>
+		
+		<a href="/blog/">Blog</a>
+		
+		<a href="/archive/">Archive</a>
+		
+		| <span id="dark-mode-toggle" onclick="toggleTheme()"></span>
+		<script src="https://caffcen.github.io/js/themetoggle.js"></script>
+		
+	</nav>
+</header>
 
-  <header>
-    <div class="bg-black">
-      <nav class="pv3 ph3 ph4-ns" role="navigation">
-  <div class="flex-l justify-between items-center center">
-    <a href="/" class="f3 fw2 hover-white no-underline white-90 dib">
-      
-        Lihang Liu&#39;s Homepage
-      
-    </a>
-    <div class="flex-l items-center">
-      
+<main>
+	<article>
+		<div class="title">
+			<h1 class="title">深入理解 B&#43; Tree</h1>
+			<div class="meta">Posted on Mar 26, 2023</div>
+		</div>
+		
 
-      
-      
-<div class="ananke-socials">
-  
-</div>
-
-    </div>
-  </div>
-</nav>
-
-    </div>
-  </header>
-
-
-
-    <main class="pb7" role="main">
-      
-  
-  <article class="flex-l flex-wrap justify-between mw8 center ph3">
-    <header class="mt4 w-100">
-      <aside class="instapaper_ignoref b helvetica tracked ttu">
-          
-        Archives
-      </aside>
-      
-
-
-
-
-
-
-
-
-
-
-  <div id="sharing" class="mt3 ananke-socials">
-    
-  </div>
-
-
-      <h1 class="f1 athelas mt3 mb1">深入理解 B&#43; Tree</h1>
-      
-      
-      
-      <time class="f6 mv4 dib tracked" datetime="2023-03-26T16:04:04+08:00">March 26, 2023</time>
-      
-
-      
-      
-    </header>
-    <div class="nested-copy-line-height lh-copy serif f4 nested-links mid-gray pr4-l w-two-thirds-l"><p>B+ 树的定义和 B 树是类似的，B+ 树在数据结构上进行了一定的改进，它的特性使得它的某些场景下教 B 树有了显著的优势。本文笔者将对 B+ 树的定义、特点以及应用进行详细解析。</p>
+		<section class="body">
+			<p>B+ 树的定义和 B 树是类似的，B+ 树在数据结构上进行了一定的改进，它的特性使得它的某些场景下教 B 树有了显著的优势。本文笔者将对 B+ 树的定义、特点以及应用进行详细解析。</p>
 <h1 id="定义">定义</h1>
 <p>B+ 树和 B 树的定义是类似的，它们都是平衡多路搜索树，在文件系统和数据库系统中都有大量的应用。只不过 B+ 树有以下几点独特的属性：</p>
 <ol>
@@ -229,37 +181,28 @@ B&#43; 树的非叶子结点不包含值（value），只存储键（key） B&#4
 <li><a href="https://stackoverflow.com/questions/870218/what-are-the-differences-between-b-trees-and-b-trees">database - What are the differences between B trees and B+ trees? - Stack Overflow</a></li>
 <li><a href="https://en.wikipedia.org/wiki/B%2B_tree#:~:text=A%20B%2B%20tree%20is%20an,B%2B%20tree">B+ tree - Wikipedia</a></li>
 </ol>
-<ul class="pa0">
-  
-</ul>
-<div class="mt6 instapaper_ignoref">
-      
-      
-      </div>
-    </div>
 
-    <aside class="w-30-l mt6-l">
+		</section>
 
-
-
-
-</aside>
-
-  </article>
-
-    </main>
-    <footer class="bg-black bottom-0 w-100 pa3" role="contentinfo">
-  <div class="flex justify-between">
-  <a class="f4 fw4 hover-white no-underline white-70 dn dib-ns pv2 ph3" href="https://caffcen.github.io/" >
-    &copy;  Lihang Liu's Homepage 2024 
-  </a>
-    <div>
-<div class="ananke-socials">
-  
-</div>
-</div>
+		<div class="post-tags">
+			
+			
+			
+		</div>
+		</article>
+</main>
+<footer>
+  <div style="display:flex"></div>
+  <div class="footer-info">
+    2024  © Lihang Liu |  <a
+      href="https://github.com/athul/archie">Archie Theme</a> | Built with <a href="https://gohugo.io">Hugo</a>
   </div>
 </footer>
 
-  </body>
+
+  
+
+
+</div>
+    </body>
 </html>
