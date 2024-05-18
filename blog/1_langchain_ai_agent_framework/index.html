@@ -2,19 +2,24 @@
 <html lang="en-us"
   dir="ltr">
 
-  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 
 <title>
     
-    1_langchain_ai_agent_framework | Lihang Liu&#39;s Homepage
+    Code Analysis of LangChain AI Agent Implementation | Lihang Liu&#39;s Homepage
     
 </title>
 
 
 
 <link rel="stylesheet" href="/assets/combined.min.95bd8f25e3a82100ceaab7f49774821700d8d89a2b551df9cd199c4de2d1626f.css" media="all">
+
+
+
+
+  
 
 
 
@@ -78,17 +83,19 @@
     <a href="/blog/">Blog</a>
     <span class="breadcrumbs-separator"> > </span>
     
-    <a class="breadcrumbs-current" href="/blog/1_langchain_ai_agent_framework/">1_langchain_ai_agent_framework</a>
+    <a class="breadcrumbs-current" href="/blog/1_langchain_ai_agent_framework/">Code Analysis of LangChain AI Agent Implementation</a>
 </div>
 
 
-<div >
+<div  class="autonumber" >
 
   <div class="single-intro-container">
 
     
 
-    <h1 class="single-title">1_langchain_ai_agent_framework</h1>
+    <h1 class="single-title">Code Analysis of LangChain AI Agent Implementation</h1>
+    
+    <p class="single-summary">Analysis of codes and designs of agent framework in LangChain</p>
     
 
     
@@ -97,9 +104,12 @@
       
       
       
-      <time datetime="2024-05-15T17:04:00&#43;08:00">May 15, 2024</time>
+      <time datetime="2024-05-18T15:04:42&#43;08:00">May 18, 2024</time>
       
 
+      
+      -
+      5 min
       
     </p>
 
@@ -110,11 +120,171 @@
   
 
   
+  
+
+  <div class="single-tags">
+    
+    <span>
+      <a href="https://caffcen.github.io/tags/llm/">#llm</a>
+    </span>
+    
+    
+    <span>
+      <a href="https://caffcen.github.io/tags/langchain/">#langchain</a>
+    </span>
+    
+    
+  </div>
+  
+  
+
+  
+
+  
 
   
 
   <div class="single-content">
-    <p>Placeholder</p>
+    <p>The AI Agent is an innovative way to harness the power of LLM. It provides additional tools and capabilities that empower the LLMs to perform web searches, retrieve data from databases, and invoke general services, among other functions. LangChain offers a well-designed and adaptable implementation of AI agents.</p>
+<p>In this post, I would like to share how the AI agent is implemented and structured in the LangChain project. You can find more information on the LangChain project <a href="https://github.com/langchain-ai/langchain">LangChain</a>.</p>
+<h1 id="the-agent-module">The Agent Module</h1>
+<h2 id="the-agent-definition">The Agent Definition</h2>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" 1.png">
+</figure></p>
+<p>An agent is composed of:</p>
+<ol>
+<li>A <code>LLMChain</code> type member represents the large language model to be called.</li>
+<li>An output parser to parse the result of tool execution.</li>
+<li>A list to hold all available tools.</li>
+</ol>
+<p>The key functionality of an agent is the <code>plan()</code> method, it calls the <code>llm_chain</code> to give the next tool to be executed, then the tool is executed and a result is parsed by the <code>output_parser</code>.</p>
+<h2 id="represent-the-action-of-the-agent">Represent the Action of the Agent</h2>
+<p>To represent the tool to be executed by the agent, and to encapsulate any necessary data for the agent to execute a tool, <code>AgentAction</code>, <code>AgentStep</code>, and <code>AgentFinish</code> are provided:</p>
+<ul>
+<li><code>AgentAction</code> represents the action to do in the next step which is planned by the llm. To be specific, it is the next tool to be invoked.</li>
+<li><code>AgentStep</code> encapsulates the result of tool execution.</li>
+<li><code>AgentFinish</code> denotes the termination of the entire process. The user&rsquo;s task is considered complete when an <code>AgentFinish</code> object is returned by the agent.</li>
+</ul>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" 2.png">
+</figure></p>
+<h2 id="the-output-parser">The Output Parser</h2>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" 3.png">
+</figure></p>
+<p>The output parse should implement the abstract <code>parse()</code> method which is used to get the result of a tool&rsquo;s invocation.</p>
+<h2 id="the-tool-module">The Tool Module</h2>
+<p>The <code>Tool</code> class represents a tool.</p>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" 4.png">
+</figure></p>
+<h2 id="the-implementation-of-agentexecutor">The Implementation of AgentExecutor</h2>
+<p>LangChain uses the idea <code>AgentExecutor</code> to actually chain together all components: <code>Agent</code>, <code>Tools</code>, <code>OutputParser</code>, etc. The tools are added and managed by the <code>AgentExecutor</code>, the iteration of <code>calling the llm for task planning -&gt; the agent picks up the right tool and runs the tool with the parameters given by the llm -&gt; parse the result and feed it to the llm again</code> is all implemented and controlled by the <code>AgentExecutor</code>.</p>
+<p>At the first place, let&rsquo;s see how the <code>AgentExecutor</code> is structured:</p>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" 5.png">
+</figure></p>
+<p>As you can see from the uml graph:</p>
+<ul>
+<li>The <code>AgentExecutor</code> holds the <code>Agent</code> object, which is used to make decisions by calling the llm (by invoke the <code>plan()</code> method defined by the <code>Agent</code>).</li>
+<li><code>Tool</code>s are registered to <code>AgentExecutor</code>.</li>
+<li>The <code>max_iterations</code> and <code>max_execution_time</code> are used to control the iteration.</li>
+<li>The actual agent execution is defined and implemented in the member function in <code>AgentExecutor</code>.</li>
+</ul>
+<p>And now let&rsquo;s have a look at how the <code>AgentExecutor</code> works under the hood:</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="font-weight:bold;text-decoration:underline">def</span> <span style="color:#666;font-weight:bold;font-style:italic">_call</span>(  
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;font-style:italic">self</span>,  
+</span></span><span style="display:flex;"><span>    inputs: Dict[<span style="font-weight:bold;font-style:italic">str</span>, <span style="font-weight:bold;font-style:italic">str</span>],  
+</span></span><span style="display:flex;"><span>    run_manager: Optional[CallbackManagerForChainRun] = <span style="font-weight:bold;text-decoration:underline">None</span>,  
+</span></span><span style="display:flex;"><span>) -&gt; Dict[<span style="font-weight:bold;font-style:italic">str</span>, Any]:  
+</span></span><span style="display:flex;"><span>    <span style="color:#666;font-style:italic">&#34;&#34;&#34;Run text through and get agent response.&#34;&#34;&#34;</span>  
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic"># Construct a mapping of tool name to tool for easy lookup  </span>
+</span></span><span style="display:flex;"><span>    name_to_tool_map = {tool.name: tool <span style="font-weight:bold;text-decoration:underline">for</span> tool <span style="font-weight:bold">in</span> <span style="font-weight:bold;font-style:italic">self</span>.tools}  
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic"># We construct a mapping from each tool to a color, used for logging.  </span>
+</span></span><span style="display:flex;"><span>    color_mapping = get_color_mapping(  
+</span></span><span style="display:flex;"><span>        [tool.name <span style="font-weight:bold;text-decoration:underline">for</span> tool <span style="font-weight:bold">in</span> <span style="font-weight:bold;font-style:italic">self</span>.tools], excluded_colors=[<span style="color:#666;font-style:italic">&#34;green&#34;</span>, <span style="color:#666;font-style:italic">&#34;red&#34;</span>]  
+</span></span><span style="display:flex;"><span>    )  
+</span></span><span style="display:flex;"><span>    intermediate_steps: List[Tuple[AgentAction, <span style="font-weight:bold;font-style:italic">str</span>]] = []  
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic"># Let&#39;s start tracking the number of iterations and time elapsed  </span>
+</span></span><span style="display:flex;"><span>    iterations = 0  
+</span></span><span style="display:flex;"><span>    time_elapsed = 0.0  
+</span></span><span style="display:flex;"><span>    start_time = time.time()  
+</span></span><span style="display:flex;"><span>    <span style="color:#888;font-style:italic"># We now enter the agent loop (until it returns something).  </span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;text-decoration:underline">while</span> <span style="font-weight:bold;font-style:italic">self</span>._should_continue(iterations, time_elapsed):  
+</span></span><span style="display:flex;"><span>        next_step_output = <span style="font-weight:bold;font-style:italic">self</span>._take_next_step(  
+</span></span><span style="display:flex;"><span>            name_to_tool_map,  
+</span></span><span style="display:flex;"><span>            color_mapping,  
+</span></span><span style="display:flex;"><span>            inputs,  
+</span></span><span style="display:flex;"><span>            intermediate_steps,  
+</span></span><span style="display:flex;"><span>            run_manager=run_manager,  
+</span></span><span style="display:flex;"><span>        )  
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> <span style="font-weight:bold;font-style:italic">isinstance</span>(next_step_output, AgentFinish):  
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">return</span> <span style="font-weight:bold;font-style:italic">self</span>._return(  
+</span></span><span style="display:flex;"><span>                next_step_output, intermediate_steps, run_manager=run_manager  
+</span></span><span style="display:flex;"><span>            )  
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>        intermediate_steps.extend(next_step_output)  
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;text-decoration:underline">if</span> <span style="font-weight:bold;font-style:italic">len</span>(next_step_output) == 1:  
+</span></span><span style="display:flex;"><span>            next_step_action = next_step_output[0]  
+</span></span><span style="display:flex;"><span>            <span style="color:#888;font-style:italic"># See if tool should return directly  </span>
+</span></span><span style="display:flex;"><span>            tool_return = <span style="font-weight:bold;font-style:italic">self</span>._get_tool_return(next_step_action)  
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold;text-decoration:underline">if</span> tool_return <span style="font-weight:bold">is</span> <span style="font-weight:bold">not</span> <span style="font-weight:bold;text-decoration:underline">None</span>:  
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold;text-decoration:underline">return</span> <span style="font-weight:bold;font-style:italic">self</span>._return(  
+</span></span><span style="display:flex;"><span>                    tool_return, intermediate_steps, run_manager=run_manager  
+</span></span><span style="display:flex;"><span>                )  
+</span></span><span style="display:flex;"><span>        iterations += 1  
+</span></span><span style="display:flex;"><span>        time_elapsed = time.time() - start_time  
+</span></span><span style="display:flex;"><span>    output = <span style="font-weight:bold;font-style:italic">self</span>.agent.return_stopped_response(  
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold;font-style:italic">self</span>.early_stopping_method, intermediate_steps, **inputs  
+</span></span><span style="display:flex;"><span>    )  
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold;text-decoration:underline">return</span> <span style="font-weight:bold;font-style:italic">self</span>._return(output, intermediate_steps, run_manager=run_manager)
+</span></span></code></pre></div><p>Codes explained as follows:</p>
+<ul>
+<li>It initializes an empty list for storing intermediate steps and variables for tracking the number of iterations and time elapsed. The start time is recorded using <code>time.time()</code>.</li>
+<li>The method enters a loop that continues until the <code>_should_continue</code> method returns <code>False</code>. This method checks whether the agent should continue based on the number of iterations and time elapsed.</li>
+<li>Within the loop, the <code>_take_next_step</code> method is called, which performs the next action in the agent&rsquo;s process. It calls the agent to ask the llm to give the tool to be executed and run the tool. The result should be parsed by the <code>output_parse</code> hold by the agent into an <code>AgentStep</code> or an <code>AgentFinish</code>.</li>
+<li>If the output of the next step is an instance of <code>AgentFinish</code>, the <code>_return</code> method is called, which likely finalizes the agent&rsquo;s process and returns the result.</li>
+<li>If the agent hasn&rsquo;t finished, the output of the next step is added to the intermediate steps. If there&rsquo;s only one step in the output, the <code>_get_tool_return</code> method is called to check if the tool should return directly. If it should, the <code>_return</code> method is called.</li>
+<li>The number of iterations is incremented, and the time elapsed is updated.</li>
+<li>If the loop ends without returning a result, the <code>return_stopped_response</code> method of the agent is called, and its output is returned using the <code>_return</code> method.</li>
+</ul>
+<h1 id="overall-structure">Overall Structure</h1>
+<p>
+
+
+
+<figure   >
+    <img loading="lazy" alt="" src=" 6.png">
+</figure></p>
+<h1 id="summary">Summary</h1>
+<p>In this post, we have delved into the implementation details of the LangChain project&rsquo;s AI agent framework. We have discussed key concepts of an agent, how these components are interconnected, and the code details of the execution iteration.</p>
+<h1 id="reference">Reference</h1>
+<ol>
+<li><a href="https://github.com/langchain-ai/langchain">GitHub - langchain-ai/langchain: 🦜🔗 Build context-aware reasoning applications</a></li>
+<li><a href="https://python.langchain.com/v0.1/docs/use_cases/tool_use/agents/">agents | 🦜️🔗 LangChain</a></li>
+<li><a href="https://arxiv.org/abs/2210.03629">[2210.03629] ReAct: Synergizing Reasoning and Acting in Language Models</a></li>
+</ol>
 
     
 <script src="https://giscus.app/client.js"
@@ -149,6 +319,26 @@
     <a href="https://github.com/tomfran/typo">tomfran/typo</a>
 </p>
 
+
+<link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+<script defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
+
+<script defer
+  src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body);"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    renderMathInElement(document.body, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false }
+      ]
+    });
+  });
+</script>
 
     </footer>
 

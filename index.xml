@@ -6,8 +6,15 @@
     <description>Recent content on Lihang Liu&#39;s Homepage</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 21 May 2023 16:04:33 +0800</lastBuildDate>
+    <lastBuildDate>Sat, 18 May 2024 15:04:42 +0800</lastBuildDate>
     <atom:link href="https://caffcen.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Code Analysis of LangChain AI Agent Implementation</title>
+      <link>https://caffcen.github.io/blog/1_langchain_ai_agent_framework/</link>
+      <pubDate>Sat, 18 May 2024 15:04:42 +0800</pubDate>
+      <guid>https://caffcen.github.io/blog/1_langchain_ai_agent_framework/</guid>
+      <description>Analysis of codes and designs of agent framework in LangChain</description>
+    </item>
     <item>
       <title>AbstractQueuedSynchronizer 简介</title>
       <link>https://caffcen.github.io/archive/13_aqs_intro/</link>
