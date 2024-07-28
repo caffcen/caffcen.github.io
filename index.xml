@@ -2,108 +2,115 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Lihang Liu&#39;s Homepage</title>
-    <link>https://caffcen.github.io/</link>
+    <link>http://localhost:1313/</link>
     <description>Recent content on Lihang Liu&#39;s Homepage</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 18 May 2024 15:04:42 +0800</lastBuildDate>
-    <atom:link href="https://caffcen.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 18 Jun 2024 16:04:41 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>深入理解 ReentrantLock</title>
+      <link>http://localhost:1313/archive/14_reentrantlock/</link>
+      <pubDate>Tue, 18 Jun 2024 16:04:41 +0800</pubDate>
+      <guid>http://localhost:1313/archive/14_reentrantlock/</guid>
+      <description>本文是对 ReentrantLock 源码的分析以及总结，详细介绍了其是实现公平与非公平锁的加解锁的原理、其与 AbstractQueuedSynchronizer 的关联。&#xA;简介 可重入锁是 JUC 包中提供的一种可重入的互斥锁，其实现基于 [[AbstractQueuedSynchronizer]] ， Java 源码的注释很好的说明了 ReentrantLock 是什么： ReentrantLock 和 Java synchronized 的语义一致，但包含更多的功能。&#xA;A reentrant mutual exclusion Lock with the same basic behavior and semantics as the implicit monitor lock accessed using synchronized methods and statements, but with extended capabilities.&#xA;代码结构 AQS 和其实现类之间的关系属于模板方法：AQS 提供基础的算法框架，实现类实现抽象方法来实现自己独特的功能和语义。 AbstractQueuedSynchronizer 的源码注释中有这么一段话，很好地说明了 AQS 与 JUC 包中具体同步器之间的关系：&#xA;Subclasses should be defined as non-public internal helper classes that are used to implement the synchronization properties of their enclosing class.</description>
+    </item>
     <item>
       <title>Code Analysis of LangChain AI Agent Implementation</title>
-      <link>https://caffcen.github.io/blog/1_langchain_ai_agent_framework/</link>
+      <link>http://localhost:1313/blog/1_langchain_ai_agent_framework/</link>
       <pubDate>Sat, 18 May 2024 15:04:42 +0800</pubDate>
-      <guid>https://caffcen.github.io/blog/1_langchain_ai_agent_framework/</guid>
+      <guid>http://localhost:1313/blog/1_langchain_ai_agent_framework/</guid>
       <description>Analysis of codes and designs of agent framework in LangChain</description>
     </item>
     <item>
       <title>AbstractQueuedSynchronizer 简介</title>
-      <link>https://caffcen.github.io/archive/13_aqs_intro/</link>
+      <link>http://localhost:1313/archive/13_aqs_intro/</link>
       <pubDate>Sun, 21 May 2023 16:04:33 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/13_aqs_intro/</guid>
+      <guid>http://localhost:1313/archive/13_aqs_intro/</guid>
       <description>本文主要介绍了 JUC 中的 AbstractQueuedSynchronizer 的实现基础、其和 CLH 队列锁之间的关联、独占锁模式及共享锁模式加解锁的过程等。不包含 ConditionObject 的分析。&#xA;简介 AQS 提供了实现同步阻塞队列的基本框架，是 juc 包中其他众多同步原语和锁实现的基础。&#xA;Provides a framework for implementing blocking locks and related synchronizers (semaphores, events, etc) that rely on first-in-first-out (FIFO) wait queues. This class is designed to be a useful basis for most kinds of synchronizers that rely on a single atomic int value to represent state. Subclasses must define the protected methods that change this state, and which define what that state means in terms of this object being acquired or released.</description>
     </item>
     <item>
       <title>深入理解 CLH Queue Lock</title>
-      <link>https://caffcen.github.io/archive/12_clh_queue_lock/</link>
+      <link>http://localhost:1313/archive/12_clh_queue_lock/</link>
       <pubDate>Sun, 09 Apr 2023 16:04:25 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/12_clh_queue_lock/</guid>
+      <guid>http://localhost:1313/archive/12_clh_queue_lock/</guid>
       <description>JUC 包中的很多同步原语是基于 AbstractQueuedSynchronizer（以下简称 AQS） 实现的，而 AQS 的实现又是基于 CLH 队列锁（CLH queued lock），因此学习并理解 CLH 队列锁对我们学习 JUC 中的各种同步原语非常有帮助。本文将阐述 CLH 队列锁的实现和原理。&#xA;CLH Queue Lock CLH 队列锁是由 Craig, Landin, Hagersten 三位大佬提出的，因此被称为 CLH 队列锁，它是一种自旋公平锁，基于虚链表实现（virtual linked list）。&#xA;《The Art of Multiprocessor Programming》7.5.2 节给出了 CLH 可能的一种 Java 语言实现：&#xA;public class CLHLock implements Lock { AtomicReference&amp;lt;QNode&amp;gt; tail; ThreadLocal&amp;lt;QNode&amp;gt; myPred; ThreadLocal&amp;lt;QNode&amp;gt; myNode; public CLHLock() { tail = new AtomicReference&amp;lt;QNode&amp;gt;(new QNode()); myNode = new ThreadLocal&amp;lt;QNode&amp;gt;() { protected QNode initialValue() { return new QNode(); } }; myPred = new ThreadLocal&amp;lt;QNode&amp;gt;() { protected QNode initialValue() { return null; } }; } public void lock() { QNode qnode = myNode.</description>
     </item>
     <item>
       <title>LeetCode 笔记 5：Search in Rotated Sorted Array</title>
-      <link>https://caffcen.github.io/archive/11_leetcode_note_5_search_in_rotated_sorted_array/</link>
+      <link>http://localhost:1313/archive/11_leetcode_note_5_search_in_rotated_sorted_array/</link>
       <pubDate>Sun, 02 Apr 2023 16:04:13 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/11_leetcode_note_5_search_in_rotated_sorted_array/</guid>
+      <guid>http://localhost:1313/archive/11_leetcode_note_5_search_in_rotated_sorted_array/</guid>
       <description>今天要讲的题目都使用到了二分查找（或者和二分查找紧密相关），同时又都是基于一个 Rotated Sorted Array。那么先从 Rotated Sorted Array 的特点讲起吧。&#xA;Rotated Sorted Array 的定义是这样子的：&#xA;There is an integer array nums sorted in ascending order (with distinct values). nums is possibly rotated at an unknown pivot index k (1 &amp;lt;= k &amp;lt; nums.length) such that the resulting array is [nums[k], nums[k+1], ..., nums[n-1], nums[0], nums[1], ..., nums[k-1]] (0-indexed).&#xA;就拿 int[] nums = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}; 举例好了，如果 nums 在 nums[4] 位置进行旋转，那么它将变成： {4, 5, 6, 7, 8, 9, 10, 0, 1, 2, 3} ，那么我们能够观察到几个特性：</description>
     </item>
     <item>
       <title>深入理解 B&#43; Tree</title>
-      <link>https://caffcen.github.io/archive/10_b&#43;tree/</link>
+      <link>http://localhost:1313/archive/10_b&#43;tree/</link>
       <pubDate>Sun, 26 Mar 2023 16:04:04 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/10_b&#43;tree/</guid>
+      <guid>http://localhost:1313/archive/10_b&#43;tree/</guid>
       <description>B+ 树的定义和 B 树是类似的，B+ 树在数据结构上进行了一定的改进，它的特性使得它的某些场景下教 B 树有了显著的优势。本文笔者将对 B+ 树的定义、特点以及应用进行详细解析。&#xA;定义 B+ 树和 B 树的定义是类似的，它们都是平衡多路搜索树，在文件系统和数据库系统中都有大量的应用。只不过 B+ 树有以下几点独特的属性：&#xA;B+ 树的非叶子结点不包含值（value），只存储键（key） B+ 树的叶子结点之间是互相连接的，B+ 树叶子结点这一层构成了一个双向链表（Doubly linked list） B+ 树的叶子结点这一层存储了所有数据的 key-links pairs，而 B 树的所有数据是散布在整棵树中的，B 树的叶子结点这一层只存储了数据全集的一部分。 B+ 树的查找、添加、删除算法和 B 树是类似的，可以参考笔者的上一篇博客进行了解：深入理解 B-Tree | caffcen&amp;rsquo;s blog，在此不在赘述。&#xA;特性 对于阶数为 m 的 B+ 树，它拥有如下性质：&#xA;每个节点最多有 m 个子节点。 每个节点最多有 m-1 个键值。 每个内部节点至少有 ⌈m/2⌉ 个子节点，根节点除外。 根节点至少有 2 个子节点。 所有叶子节点出现在同一层级上，叶子结点与叶子结点之间有双向引用，叶子结点这一层构成了一条双向链表。 一个具有 k 个子节点的非叶节点包含 k-1 个键值。 叶子结点这一层存储了所有数据（所有的 key-link pairs） B-Tree vs. B+ Tree B 树和 B+ 树的区别对比，可以参考 Stack Overflow 这个问题：database - What are the differences between B trees and B+ trees?</description>
     </item>
     <item>
       <title>深入理解 B-Tree</title>
-      <link>https://caffcen.github.io/archive/9_btree/</link>
+      <link>http://localhost:1313/archive/9_btree/</link>
       <pubDate>Sat, 18 Mar 2023 16:03:56 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/9_btree/</guid>
+      <guid>http://localhost:1313/archive/9_btree/</guid>
       <description>B 树是一种平衡多路搜索树，可以看做是对二叉搜索树（Binary Search Tree）的拓展。因为 B 树的自平衡以及允许一个节点存储多个值的特性，被广泛运用在数据库以及文件系统中，非常适用于存储大量数据。&#xA;要理解 B 树，最好的方式就是学习 2-3 搜索树——B 树的一种特例。&#xA;1. 2-3 搜索树 (2-3 Search Tree) 1.1 定义 2-3 搜索树是对二叉搜索树一种自然的扩充，二叉搜索树的任意一个节点只能存储一个 key、两个 links，但是 2-3 搜索树扩展了这一设定，2-3 搜索树允许存在以下两类节点：&#xA;2-node：拥有一个 key 两个 links，2-node 和二叉搜索树中的节点完全等价，两个 links 分别指向左子树和右子树： 左子树中的所有节点的 key 均『小于』当前 2-node 的 key； 右子树中的所有节点均『大于』当前 2-node 的 key。 3-node：拥有两个 keys 三个 links，3 个 links 分别指向左子树、右子树和中间子树： 左子树中的所有节点的 key 均『小于』当前 3-node 较小的 key； 右子树中的所有节点均『大于』当前 3-node 较大的 key； 中间子树中的所有节点均大于 3-node 较小的 key，且小于 3-node 较大的 key。 这里大于、小于打引号是因为类型的大小关系往往是可以自定义的。&#xA;本文使用 key 表示存储数据的键，links 表示指向其他节点的引用，value 表示存储数据实际存储的值，在数据库以及文件系统中，value 可能是指向实际数据的指针。</description>
     </item>
     <item>
       <title>LeetCode 笔记 4：Binary Search 的5种变体应用</title>
-      <link>https://caffcen.github.io/archive/8_leetcode_note_4_binary_search/</link>
+      <link>http://localhost:1313/archive/8_leetcode_note_4_binary_search/</link>
       <pubDate>Sun, 12 Mar 2023 16:03:48 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/8_leetcode_note_4_binary_search/</guid>
+      <guid>http://localhost:1313/archive/8_leetcode_note_4_binary_search/</guid>
       <description>二分查找在算法题目中是十分常见的一类题目，但这类题目往往要求二分查找找出解集中的第一个、最后一个解，这个时候通常的二分查找算法就无法直接套用了。&#xA;本文将列举 5 种二分查找的变体应用，它们分别是：&#xA;Contains，是否包含目标 Index of first occurrence of a key，目标第一次出现的下标 Index of last occurrence of a key，目标最后一次出现的下标 Index of least element greater than (or equal) to key，最小的大于（或大于等于）目标的下标 Index of greatest element less than (or equal to) key，最大的小于（或小于等于）目标的下标 之后会更新几篇文章针对不同类型的题目进行分析。&#xA;这 5 中变体算法的代码如下：&#xA;class BinarySearch { /** * 是否包含 key * * @param nums 输入数组 * @param key 目标 * @return true 包含；false 不包含 */ public static boolean contains(int[] nums, int key) { int low = 0, high = nums.</description>
     </item>
     <item>
       <title>MySQL InnoDB Bin Log, Redo Log, Undo Log 详解</title>
-      <link>https://caffcen.github.io/archive/7_mysql_innodb_bin_redo_undo_log/</link>
+      <link>http://localhost:1313/archive/7_mysql_innodb_bin_redo_undo_log/</link>
       <pubDate>Sun, 26 Feb 2023 16:03:36 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/7_mysql_innodb_bin_redo_undo_log/</guid>
+      <guid>http://localhost:1313/archive/7_mysql_innodb_bin_redo_undo_log/</guid>
       <description>Bin log，Redo log 以及 Undo log 是 MySQL 以及 InnoDB 中较为重要的 3 中日志文件，它们帮助实现了本地事务的原子性以及持久性，同时还是复制、MVCC 等功能必不可少的组成部分。&#xA;Bin Log The binary log contains “events” that describe database changes such as table creation operations or changes to table data.&#xA;Bin log 记录所有对于 MySQL 执行的更改操作（包括不同存储引擎相关的操作），不记录 SELECT 和 SHOW 这类不修改数据库的操作。Bin log 产生于 MySQL 数据库上层，任何存储引擎对于数据库的更改都会产生 Bin log，包括 InnoDB、MyISAM、Heap 等任何存储引擎的⽇志。&#xA;Bin log 是逻辑日志，记录的是 SQL 语句。&#xA;Bin log 的作用 Bin log 的作用主要是：&#xA;恢复：数据库恢复阶段，某些数据的恢复依赖于二进制日志 复制（replication）：MySQL 集群间的同步是将 bin log 中记录的数据更改复制给其它节点实现的。 From official doc MySQL :: MySQL 8.</description>
     </item>
     <item>
       <title>LeetCode 笔记 3：Construct Binary Tree from xxx Traversal</title>
-      <link>https://caffcen.github.io/archive/6_leetcode_note_3_construct_bst_from_xxx_traversal/</link>
+      <link>http://localhost:1313/archive/6_leetcode_note_3_construct_bst_from_xxx_traversal/</link>
       <pubDate>Sun, 26 Feb 2023 16:03:22 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/6_leetcode_note_3_construct_bst_from_xxx_traversal/</guid>
+      <guid>http://localhost:1313/archive/6_leetcode_note_3_construct_bst_from_xxx_traversal/</guid>
       <description>这一类题目（具体题目可以参考文末的链接）要求我们从 inorder, preorder 及 postorder traversal 其中的两个构建出二叉树，之所以能够通过这三种遍历方式中的两个就构建出整棵二叉树，是因为任意两种遍历方式都能够帮助我们递归地找出当前 subroot 的 left 和 right subtree 的范围。而这要从这三种遍历方式的特点说起：&#xA;class TreeNode { int val; TreeNode left; TreeNode right; TreeNode() { } TreeNode(int val) { this.val = val; } TreeNode(int val, TreeNode left, TreeNode right) { this.val = val; this.left = left; this.right = right; } public static void preorder(TreeNode root, List&amp;lt;Integer&amp;gt; list) { if (root == null) { return; } list.add(root.val); preorder(root.left, list); preorder(root.right, list); } public static void postorder(TreeNode root, List&amp;lt;Integer&amp;gt; list) { if (root == null) { return; } postorder(root.</description>
     </item>
     <item>
       <title>LeetCode 笔记 2：Binary Tree Lowest Common Ancestor</title>
-      <link>https://caffcen.github.io/archive/5_leetcode_note_2_lca/</link>
+      <link>http://localhost:1313/archive/5_leetcode_note_2_lca/</link>
       <pubDate>Sun, 19 Feb 2023 16:03:14 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/5_leetcode_note_2_lca/</guid>
+      <guid>http://localhost:1313/archive/5_leetcode_note_2_lca/</guid>
       <description>Loweset Common Ancestor From wikipedia Lowest common ancestor - Wikipedia:&#xA;In graph theory and computer science, the lowest common ancestor (LCA) (also called least common ancestor) of two nodes v and w in a [tree]( https://en.wikipedia.org/wiki/Tree_ (graph_theory) &amp;ldquo;Tree (graph theory)&amp;quot;) or directed acyclic graph (DAG) T is the lowest (i.e. deepest) node that has both v and w as descendants, where we define each node to be a descendant of itself (so if v has a direct connection from w, w is the lowest common ancestor).</description>
     </item>
     <item>
       <title>本地事务的原子性和持久性是如何实现的</title>
-      <link>https://caffcen.github.io/archive/4_implement_atomic_and_durable/</link>
+      <link>http://localhost:1313/archive/4_implement_atomic_and_durable/</link>
       <pubDate>Sun, 19 Feb 2023 16:03:04 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/4_implement_atomic_and_durable/</guid>
+      <guid>http://localhost:1313/archive/4_implement_atomic_and_durable/</guid>
       <description>要实现持久性，数据库事务的修改必须要写入到磁盘中，否则，当出现数据库异常退出、系统宕机、机房断电等意外情况时，位于内存中的所有数据将会丢失。&#xA;但是，磁盘的操作又不是一个原子性行为，数据库可能在写入前、写入后、正在写等状态发生异常，这就需要我们采取一定的手段来保证事务的原子性。&#xA;目前的数据库管理系统采用的是先写日志、再写磁盘的策略来保证事务的原子性以及持久性的。本文将阐述 Commit Logging、Shadow Paging 以及 Write-Ahead Logging 三种策略。&#xA;Commit Logging Commit logging 是一种事务实现方式。在将数据修改写到磁盘之前，先把事务操作所需要的所有信息（包括修改什么数据、数据物理上位于哪个内存页和磁盘块中、从什么值改成什么值，等等）以日志的形式写到文件中。&#xA;只有日志记录全部写入到了磁盘之中后（日记文件也需要持久化到磁盘中），才会根据日志记录中记录的信息将修改写入到磁盘。&#xA;一个事务成功提交会，会在日志记录中添加上 Commit Record ，表示事务已经成功提交。在讲事务的修改成功写入到磁盘中后，还会在添加上一条 End Record 用来标识磁盘写入成功。&#xA;Commit Logging 如何保证持久性和原子性 一旦事务在日志记录中写入了 Commit Record ，那么该事务的所有修改已经全部安全落盘，那么，即便数据库在讲事务的修改写入到磁盘的过程中异常退出，在数据库系统重启恢复阶段，也能够将未完成的写入继续做完，这保证了事务的持久性。&#xA;如果 DBMS 在将一个事务的 Commit Record 安全写入到日志文件之前就异常终止，那么，只需要在 DBMS 重启恢复阶段，回滚该事务的所有变更的写入操作即可，这保证了事务的原子性，不会存在中间状态。&#xA;Commit Logging 的缺陷 Commit Logging 的缺陷在于，在事务讲修改更新操作完全写入日志记录文件之前，无法讲修改写到磁盘之中，日志文件的修改和磁盘的修改变成了同步的操作。如果在日志文件写入的同时磁盘处于空闲状态，那么将会导致磁盘资源的空置和浪费。&#xA;Shadow Paging Shadow paging 是另一个实现事务原子性以及持久性的技术。它是基于 Copy-on-Write 的方法。&#xA;Shadow paging 是这样工作的：&#xA;在事务修改一个数据页之前，将会复制一份该数据页的副本，该副本即为原数据页的影子 shadow。 所有的修改将会作用于影子页，因为影子页没有被位于磁盘中的任何数据页所引用，因此它的修改是十分安全的，不会影响一致性。 当影子页准备被持久化的时候，磁盘中所有引用原数据页的指针将被指向影子页。 最后一步的指针修改可以认为是原子性的，现在磁盘在硬件上保证了不会出现改了『半个值』的情况。 Shadow Paging 的缺点 Shadow paging 的实现要比 Commit Logging 更加简单，但只要涉及到并发锁时，Shadow Paging 所能够处理的并发事务数量将成为一个瓶颈。</description>
     </item>
     <item>
       <title>本地事务的隔离性是如何实现的</title>
-      <link>https://caffcen.github.io/archive/3_implement_isolation/</link>
+      <link>http://localhost:1313/archive/3_implement_isolation/</link>
       <pubDate>Sun, 12 Feb 2023 16:02:53 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/3_implement_isolation/</guid>
+      <guid>http://localhost:1313/archive/3_implement_isolation/</guid>
       <description>如果没有并发的存在，数据库所有事务总是串行执行的，那么也就不会有临界资源竞争的情况出现，但现实情况是不可能没有并发的存在。&#xA;为了保证并发的正确性，需要通过对数据库资源加锁。本文将首先介绍数据库中的锁，之后会介绍各个隔离级别及其实现方式。&#xA;锁 写锁（Write Lock，也叫作排他锁，eXclusive Lock，简写为 X-Lock）：如果数据有加写锁，就只有持有写锁的事务才能对数据进行写入操作，数据加持着写锁时，其他事务不能写入数据，也不能施加读锁。 读锁（Read Lock，也叫作共享锁，Shared Lock，简写为 S-Lock）：多个事务可以对同一个数据添加多个读锁，数据被加上读锁后就不能再被加上写锁，所以其他事务不能对该数据进行写入，但仍然可以读取。对于持有读锁的事务，如果该数据只有它自己一个事务加了读锁，允许直接将其升级为写锁，然后写入数据。 范围锁（Range Lock）：对于某个范围直接加排他锁，在这个范围内的数据不能被写入。 特别注意：写锁禁止其他事务施加读锁，而不是禁止事务读取数据。&#xA;兼容性 只有读锁和读锁是兼容的，写锁不兼容任何其他锁。&#xA;Write Lock (X) Read Lock (S) Write Lock (X) 不兼容 不兼容 Read Lock (S) 不兼容 兼容 事务隔离级别 事务的隔离性是通过锁的机制来实现的，事务的隔离性越高，并发吞吐量越低，为了让开发人员能够在吞吐量以及隔离性之前取的较好的平衡点，数据库提供了多种隔离性级别。&#xA;从本质上来说，事务在不同隔离级别下的不同表现，来源于不同隔离级别采取的加锁机制的不同。&#xA;下表是事务的 4 个隔离级别，隔离性从上到下依次递减：&#xA;隔离级别 特征 可能存在的问题 Serializability，可串行性 多个事务并发执行的效果，和串行执行的效果一致。 无 Repeatable read，可重复读 可重复度保证一个事务读取到的数据，在整个事务执行过程中不会改变。 幻读 Read committed，读已提交 不允许一个事务读取到其他事务提交的数据。 幻读、不可重复读 Read uncommitted，读未提交 允许一个事务读取到其他事务未提交的数据。 幻读、不可重复读、脏读 Serializability, 可串行性 对事务所涉及到的数据加读锁、写锁、范围锁即可实现 Serializability 所要求的隔离性。&#xA;Repeatable Read, 可重复读 可重复读 对事务所涉及的数据加读锁和写锁，且一直持有至事务结束，但不再加范围锁。这就意味着 可重复读 可能会出现幻读（Phantom reads, 可参考下文针对幻读问题的讨论）的问题，比如说：</description>
     </item>
     <item>
       <title>CAP 理论和 PACELC 理论</title>
-      <link>https://caffcen.github.io/archive/2_cap_pacelc_theory/</link>
+      <link>http://localhost:1313/archive/2_cap_pacelc_theory/</link>
       <pubDate>Sat, 04 Feb 2023 15:59:55 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/2_cap_pacelc_theory/</guid>
+      <guid>http://localhost:1313/archive/2_cap_pacelc_theory/</guid>
       <description>CAP 理论 CAP 理论阐述的是，一个分布式系统不可能同时满足一致性（consistency）、可用性（availability）和分区容错性（partition tolerance）这 3 个特性，至多只能满足其中的两个，实际上要么满足 CP（一致性+分区容错性），要么满足 AP（可用性+分区容错性）。&#xA;一致性 consistency 读请求（read request）总是能得到最新的值，也就是说，在任何时间，分布式系统中所有节点对于任一一个值存储的都是相同版本。这便是一致性。&#xA;可用性 availability 可用性意思是，每一个请求都能够收到非异常返回，但并不保证请求拿到的值就是最新的值。&#xA;分区容错性 partition tolerance 分区（partition）意味着分布式系统的任意一对节点出现了通讯中断。而分区容错性则要求，即便在内部节点出现故障时，整个系统依然能够运行，部分节点之间的网络异常不会导致整个系统的失效。&#xA;分区容错的必要性 分区容错性是一个分布式系统不可或缺的特性，因为任何系统的任意节点之间都有可能出现网络故障。当一个系统出现分区，部分内部节点无法访问彼此的时候，必须要在一致性和可用性之间做出选择：是为了保障服务依然可用而损害一致性呢，又或者是保障一致性而拒绝服务？&#xA;举个例子，考虑上图的情况，假设有两个节点 A 和 B 之间发生了分区的情况，当用户先向节点 B 给 X 变量写一个值后，从节点 A 读取 X 变量，那么系统面临着两个选择：&#xA;它可以选择其中一个请求返回失败，但这样就损害了可用性 它可以处理两个请求，但是针对读请求返回一个旧的值，但这样就破坏了一致性 因此，我们能够得出结论：&#xA;实际上，CAP 理论要求一个分布式系统在内部节点发生网络故障，分区错误发生时，要么选择保留一致性，要么选择维护可用性。&#xA;PACELC 理论 PACELC 理论是 CAP 理论的补充，以下这段文字摘抄自维基百科 PACELC theorem - Wikipedia，它指出了 PACELC 这几个字母的缩写是怎么来的：&#xA;In theoretical computer science, the PACELC theorem is an extension to the CAP theorem. It states that in case of network partitioning (P) in a distributed computer system, one has to choose between availability (A) and consistency (C) (as per the CAP theorem), but else (E), even when the system is running normally in the absence of partitions, one has to choose between latency (L) and consistency (C).</description>
     </item>
     <item>
       <title>LeetCode 笔记 1：Sliding Window 题目总结</title>
-      <link>https://caffcen.github.io/archive/1_leetcode_note_1_sliding_window/</link>
+      <link>http://localhost:1313/archive/1_leetcode_note_1_sliding_window/</link>
       <pubDate>Sun, 08 Jan 2023 15:14:33 +0800</pubDate>
-      <guid>https://caffcen.github.io/archive/1_leetcode_note_1_sliding_window/</guid>
+      <guid>http://localhost:1313/archive/1_leetcode_note_1_sliding_window/</guid>
       <description>什么是滑动窗口算法 先用一个简单的题目来说明什么是滑动窗口算法。&#xA;最直接的思路就是，对于每个给定的 index，计算出从该 index 开始的一个最小 subarray，其和大于 target:&#xA;int minLength = Integer.MAX_VALUE; for (int i = 0; i &amp;lt; nums.length; ++i) { int sum = 0; for (int j = i; j &amp;lt; nums.length; ++j) { sum += nums[j]; if (sum &amp;gt; target) { minLength = Math.min(minLength, j - i + 1); } break; } } 这个算法的问题就在于，相邻的 index 之间，存在着重合的计算。&#xA;解决办法就是维护一个滑动窗口，这样就能够解决重复计算的问题了：&#xA;class Solution { public int minSubArrayLen(int target, int[] nums) { int res = Integer.</description>
     </item>
   </channel>

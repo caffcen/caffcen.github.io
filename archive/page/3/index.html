@@ -2,7 +2,7 @@
 <html lang="en-us"
   dir="ltr">
 
-  <head>
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width">
 
@@ -15,11 +15,6 @@
 
 
 <link rel="stylesheet" href="/assets/combined.min.95bd8f25e3a82100ceaab7f49774821700d8d89a2b551df9cd199c4de2d1626f.css" media="all">
-
-
-
-
-  
 
 
 
@@ -92,6 +87,43 @@
 
 
 
+
+
+
+
+
+<div class="post-line">
+
+    
+    
+    
+    
+
+    <p class="line-date">19 Feb 2023 </p>
+
+    <div>
+        <p class="line-title">
+            <a href="/archive/4_implement_atomic_and_durable/">
+                本地事务的原子性和持久性是如何实现的
+            </a>
+        </p>
+
+        
+        <p class="line-summary"> 要实现持久性，数据库事务的修改必须要写入到磁盘中，否则，当出现数据库异常退出、系统宕机、机房断电等意外情况时，位于内存中的所有数据将会丢失。
+但是，磁盘的操作又不是一个原子性行为，数据库可能在写入前、写入后、正在写等状态发生异常，这就需要我们采取一定的手段来保证事务的原子性。
+目前的数据库管理系统采用的是先写日志、再写磁盘的策略来保证事务的原子性以及持久性的。本文将阐述 Commit Logging、Shadow Paging 以及 Write-Ahead Logging 三种策略。
+Commit Logging Commit logging 是一种事务实现方式。在将数据修改写到磁盘之前，先把事务操作所需要的所有信息（包括修改什么数据、数据物理上位于哪个内存页和磁盘块中、从什么值改成什么值，等等）以日志的形式写到文件中。
+只有日志记录全部写入到了磁盘之中后（日记文件也需要持久化到磁盘中），才会根据日志记录中记录的信息将修改写入到磁盘。
+一个事务成功提交会，会在日志记录中添加上 Commit Record ，表示事务已经成功提交。在讲事务的修改成功写入到磁盘中后，还会在添加上一条 End Record 用来标识磁盘写入成功。
+Commit Logging 如何保证持久性和原子性 一旦事务在日志记录中写入了 Commit Record ，那么该事务的所有修改已经全部安全落盘，那么，即便数据库在讲事务的修改写入到磁盘的过程中异常退出，在数据库系统重启恢复阶段，也能够将未完成的写入继续做完，这保证了事务的持久性。
+如果 DBMS 在将一个事务的 Commit Record 安全写入到日志文件之前就异常终止，那么，只需要在 DBMS 重启恢复阶段，回滚该事务的所有变更的写入操作即可，这保证了事务的原子性，不会存在中间状态。
+Commit Logging 的缺陷 Commit Logging 的缺陷在于，在事务讲修改更新操作完全写入日志记录文件之前，无法讲修改写到磁盘之中，日志文件的修改和磁盘的修改变成了同步的操作。如果在日志文件写入的同时磁盘处于空闲状态，那么将会导致磁盘资源的空置和浪费。
+Shadow Paging Shadow paging 是另一个实现事务原子性以及持久性的技术。它是基于 Copy-on-Write 的方法。
+Shadow paging 是这样工作的：
+在事务修改一个数据页之前，将会复制一份该数据页的副本，该副本即为原数据页的影子 shadow。 所有的修改将会作用于影子页，因为影子页没有被位于磁盘中的任何数据页所引用，因此它的修改是十分安全的，不会影响一致性。 当影子页准备被持久化的时候，磁盘中所有引用原数据页的指针将被指向影子页。 最后一步的指针修改可以认为是原子性的，现在磁盘在硬件上保证了不会出现改了『半个值』的情况。 Shadow Paging 的缺点 Shadow paging 的实现要比 Commit Logging 更加简单，但只要涉及到并发锁时，Shadow Paging 所能够处理的并发事务数量将成为一个瓶颈。 </p>
+        
+    </div>
+</div>
 
 
 
@@ -199,7 +231,7 @@ class Solution { public int minSubArrayLen(int target, int[] nums) { int res = I
 <div class="pagination">
     <div class="pagination-control">
         
-        <a href="https://caffcen.github.io/archive/page/2/">
+        <a href="http://localhost:1313/archive/page/2/">
             prev
         </a>
         
