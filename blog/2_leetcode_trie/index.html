@@ -1,0 +1,324 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://caffcen.github.io/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://caffcen.github.io/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://caffcen.github.io/favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://caffcen.github.io/android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://caffcen.github.io/apple-touch-icon.png><meta name=description content><title>LeetCode Trie Data Structure & Related Problems | Lihang Liu's Homepage</title><link rel=canonical href=https://caffcen.github.io/blog/2_leetcode_trie/><meta property="og:url" content="https://caffcen.github.io/blog/2_leetcode_trie/"><meta property="og:site_name" content="Lihang Liu's Homepage"><meta property="og:title" content="LeetCode Trie Data Structure & Related Problems"><meta property="og:description" content="Introducing the trie data structure and how it can speed up prefix search"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="blog"><meta property="article:published_time" content="2025-11-16T09:46:55-05:00"><meta property="article:modified_time" content="2025-11-30T11:56:32-05:00"><meta property="article:tag" content="Leetcode"><link rel=stylesheet href=/assets/combined.min.57df9e7d692553f966cff4593ede6b53efb74da234876bacffeac774bd572e53.css media=all></head><body class=auto><div class=content><header><div class=header><h1 class=header-title><a href=https://caffcen.github.io/>Lihang Liu's Homepage</a></h1><div class=header-menu><p class=small><a href=/>/Home</a></p><p class=small><a href=/blog/>/Blog</a></p><p class=small><a href=/archive/>/Archive</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a><span class=breadcrumbs-separator>/</span><a href=/blog/>Blog</a><span class=breadcrumbs-separator>/</span>
+<a href=/blog/2_leetcode_trie/>LeetCode Trie Data Structure & Related Problems</a></div><div><article><header class=single-intro-container><h1 class=single-title>LeetCode Trie Data Structure & Related Problems</h1><p class=single-summary>Introducing the trie data structure and how it can speed up prefix search</p><div class=single-subsummary><div><p class=single-date><time datetime=2025-11-16T09:46:55-05:00>November 16, 2025</time>
+&nbsp; · &nbsp;11 min read</p></div></div></header><div class=single-tags><span><a href=https://caffcen.github.io/tags/leetcode/>#Leetcode</a></span></div><aside class=toc><p><strong>Table of contents</strong></p><nav id=TableOfContents><ul><li><a href=#421-maximum-xor-of-two-numbers-in-an-array>421. Maximum XOR of Two Numbers in an Array</a><ul><li><a href=#problem-description>Problem description</a></li><li><a href=#naive-solution>Naive solution</a></li><li><a href=#using-a-binary-trie-to-speed-up>Using a binary trie to speed up</a></li><li><a href=#complexity-analysis>Complexity analysis</a></li></ul></li><li><a href=#212-word-search-ii>212. Word Search II</a><ul><li><a href=#problem-description-1>Problem description</a></li><li><a href=#naive-solution-1>Naive solution</a></li><li><a href=#speed-up-by-storing-keywords-in-a-trie>Speed up by storing keywords in a trie</a></li><li><a href=#complexity-analysis-1>Complexity analysis</a></li></ul></li></ul></nav></aside><div class=single-content><p>In this post, I will talk about the Trie (Prefix Tree) data structure, how it is typically implemented, and several LeetCode problems that require it.</p><h1 class=heading id=the-trie-data-structure>The Trie Data Structure
+<a class=anchor href=#the-trie-data-structure>#</a></h1><p>Quote from <a href=https://en.wikipedia.org/wiki/Trie>Trie - Wikipedia</a>:</p><blockquote><p>[!quote]</p><p>In computer science, a <strong>trie</strong> (/ˈtraɪ/, /ˈtriː/), also known as a <strong>digital tree</strong> or <strong>prefix tree</strong>, is a specialized <a href=https://en.wikipedia.org/wiki/Search_tree>search tree</a> data structure used to store and retrieve strings from a dictionary or set. Unlike a <a href=https://en.wikipedia.org/wiki/Binary_search_tree title="Binary search tree">binary search tree</a>, nodes in a trie do not store their associated key. Instead, each node&rsquo;s <em>position</em> within the trie determines its associated key, with the connections between nodes defined by individual <a href=https://en.wikipedia.org/wiki/Character_(computing) title="Character (computing)">characters</a> rather than the entire key.</p></blockquote><p>The Trie data structure is a tree-like data structure where each node stores pointers to children. Each node in a Trie represents a char, and a string the Trie stores can be concatenated with all chars along the path from the root node to the end node (note that an end node could be an internal node, it is not necessarily a leaf node).</p><p><figure><div class=img-container style=--w:1053;--h:416><img loading=lazy alt src=/blog/2_leetcode_trie/1.png width=1053 height=416></div></figure></p><p>Trie is especially useful when querying whether a string or a prefix is present or not in <code>O(L)</code> time, where <code>L</code> is the length of the string. It has two main API: <code>insert</code> and <code>search</code>.</p><ul><li><code>insert</code>: Inserting a string char by char starting from the root node. Instantiating any internal <code>TrieNode</code> if necessary.</li><li><code>search</code>: Starting from the root, check character by character. If the <code>TrieNode</code> that corresponds to the char is null, then we can infer that the prefix or string was not inserted before.</li></ul><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>Trie</span> {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> TrieNode root;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=color:#666;font-weight:700;font-style:italic>Trie</span>() {
+</span></span><span style=display:flex><span>        root = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode();
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>insert</span>(String word) {
+</span></span><span style=display:flex><span>        TrieNode curr = root;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> index;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>char</span>[] charArr = word.toCharArray();
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>char</span> c : charArr) {
+</span></span><span style=display:flex><span>            index = c - <span style=color:#666;font-style:italic>&#39;a&#39;</span>;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[index] == <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>                curr.children[index] = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode();
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            curr = curr.children[index];
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        curr.isEnd = <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>search</span>(String word) {
+</span></span><span style=display:flex><span>        TrieNode curr = root;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> index;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>char</span>[] charArr = s.toCharArray();
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>char</span> c : charArr) {
+</span></span><span style=display:flex><span>            index = c - <span style=color:#666;font-style:italic>&#39;a&#39;</span>;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[index] == <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>null</span>;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            curr = curr.children[index];
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> curr;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>TrieNode</span> {
+</span></span><span style=display:flex><span>        TrieNode[] children;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>boolean</span> isEnd;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=color:#666;font-weight:700;font-style:italic>TrieNode</span>() {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>this</span>.children = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode[26];
+</span></span><span style=display:flex><span>            isEnd = <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>In most cases, we need only to deal with lower-case English letters, so we can use an array to store child nodes. One can also use a dictionary (A map) to implement the data structure, but under most cases using array is much faster.</p><h1 class=heading id=leetcode-problems>LeetCode Problems
+<a class=anchor href=#leetcode-problems>#</a></h1><p>If you want to practice implementing the data structure itself, you can start from those problems that directly require implementing the Trie.</p><ul><li><a href=https://leetcode.com/problems/implement-trie-prefix-tree/>208. Implement Trie (Prefix Tree)</a></li><li><a href=https://leetcode.com/problems/design-add-and-search-words-data-structure/>211. Design Add and Search Words Data Structure</a></li><li><a href=https://leetcode.com/problems/implement-trie-ii-prefix-tree>1804. Implement Trie II (Prefix Tree)</a></li></ul><h2 class=heading id=421-maximum-xor-of-two-numbers-in-an-array><a href=https://leetcode.com/problems/maximum-xor-of-two-numbers-in-an-array/>421. Maximum XOR of Two Numbers in an Array</a>
+<a class=anchor href=#421-maximum-xor-of-two-numbers-in-an-array>#</a></h2><h3 class=heading id=problem-description>Problem description
+<a class=anchor href=#problem-description>#</a></h3><p>Given an integer array <code>nums</code>, return <em>the maximum result of</em> <code>nums[i] XOR nums[j]</code>, where <code>0 &lt;= i &lt;= j &lt; n</code>.</p><p><strong>Example 1:</strong></p><p><strong>Input:</strong> <code>nums = [3,10,5,25,2,8]</code>
+<strong>Output:</strong> 28
+<strong>Explanation:</strong> The maximum result is 5 XOR 25 = 28.</p><p><strong>Example 2:</strong></p><p><strong>Input:</strong> <code>nums = [14,70,53,83,49,91,36,80,92,51,66,70]</code>
+<strong>Output:</strong> 127</p><p><strong>Constraints:</strong></p><ul><li><code>1 &lt;= nums.length &lt;= 2 * 105</code></li><li><code>0 &lt;= nums[i] &lt;= 231 - 1</code></li></ul><h3 class=heading id=naive-solution>Naive solution
+<a class=anchor href=#naive-solution>#</a></h3><p>A naive solution is to do a $O(n^2)$ XOR for every pair of numbers. Correct solution, but scales poorly for large input. Can we process every input number just once, resulting in $O(n)$ time complexity?</p><h3 class=heading id=using-a-binary-trie-to-speed-up>Using a binary trie to speed up
+<a class=anchor href=#using-a-binary-trie-to-speed-up>#</a></h3><p>Of course yes. The key insight is that to maximize the XOR of two numbers, we want their binary representations to differ in as many bit positions as possible, especially in the higher-order bits. XOR produces 1 when bits are different and 0 when they&rsquo;re the same, so maximizing differences maximizes the result.</p><p>By storing all numbers in a binary Trie, we can efficiently find the number that produces maximum XOR with any given number by greedily choosing the opposite bit at each level, starting from the most significant bit.</p><p>Here is the code:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>Solution</span> {
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;text-decoration:underline>int</span> <span style=color:#666;font-weight:700;font-style:italic>findMaximumXOR</span>(<span style=font-weight:700;text-decoration:underline>int</span>[] nums) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (nums.length &lt; 2) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>return</span> 0;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> maxRes = 0;
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// insert the first number</span>
+</span></span><span style=display:flex><span>        insert(nums[0]);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>int</span> i = 1; i &lt; nums.length; ++i) {
+</span></span><span style=display:flex><span>            maxRes = Math.max(maxRes, findMaxXOR(nums[i]));
+</span></span><span style=display:flex><span>            insert(nums[i]);
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> maxRes;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>insert</span>(<span style=font-weight:700;text-decoration:underline>int</span> num) {
+</span></span><span style=display:flex><span>        TrieNode curr = root;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> bit;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>int</span> i = 30; i &gt;= 0; --i) {
+</span></span><span style=display:flex><span>            bit = (num &gt;&gt; i) &amp; 1;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[bit] == <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>                curr.children[bit] = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode();
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            curr = curr.children[bit];
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>int</span> <span style=color:#666;font-weight:700;font-style:italic>findMaxXOR</span>(<span style=font-weight:700;text-decoration:underline>int</span> num) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> max = 0, bit, toggledBit;
+</span></span><span style=display:flex><span>        TrieNode curr = root;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>int</span> i = 30; i &gt;= 0; --i) {
+</span></span><span style=display:flex><span>            bit = (num &gt;&gt; i) &amp; 1;
+</span></span><span style=display:flex><span>            toggledBit = 1 - bit;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[toggledBit] != <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>                max |= (1 &lt;&lt; i);
+</span></span><span style=display:flex><span>                curr = curr.children[toggledBit];
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> {
+</span></span><span style=display:flex><span>                curr = curr.children[bit];
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> max;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>TrieNode</span> {
+</span></span><span style=display:flex><span>        TrieNode[] children;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=color:#666;font-weight:700;font-style:italic>TrieNode</span>() {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>this</span>.children = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode[2];
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> TrieNode root = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode();
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>To insert a number into the binary trie, we start from the most significant bit, and insert one bit into the binary trie at a time. Recall that for a signed integer, the leftmost bit is used for the sign, so we start from the second leftmost bit:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>insert</span>(<span style=font-weight:700;text-decoration:underline>int</span> num) {
+</span></span><span style=display:flex><span>    TrieNode curr = root;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>int</span> bit;
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// start from the second most significant bit</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>int</span> i = 30; i &gt;= 0; --i) {
+</span></span><span style=display:flex><span>        bit = (num &gt;&gt; i) &amp; 1;
+</span></span><span style=display:flex><span>	    <span style=color:#888;font-style:italic>// instantiate a new TrieNode if not present</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[bit] == <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>            curr.children[bit] = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode();
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// update curr</span>
+</span></span><span style=display:flex><span>        curr = curr.children[bit];
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Starting from the second number, we search for the maximal possible XOR by searching the binary trie bit-by-bit like follows:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>int</span> <span style=color:#666;font-weight:700;font-style:italic>findMaxXOR</span>(<span style=font-weight:700;text-decoration:underline>int</span> num) {
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>int</span> max = 0, bit, toggledBit;
+</span></span><span style=display:flex><span>    TrieNode curr = root;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>int</span> i = 30; i &gt;= 0; --i) {
+</span></span><span style=display:flex><span>	    <span style=color:#888;font-style:italic>// to produce the maximal XOR, we search for the &#34;complementary&#34; bit</span>
+</span></span><span style=display:flex><span>	    <span style=color:#888;font-style:italic>// that is, if the current bit is 1, we search for 0, and vice versa</span>
+</span></span><span style=display:flex><span>        bit = (num &gt;&gt; i) &amp; 1;
+</span></span><span style=display:flex><span>        toggledBit = 1 - bit;
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[toggledBit] != <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>	        <span style=color:#888;font-style:italic>// if the toggledBit is present, then the bit at position i for the maximum should be 1</span>
+</span></span><span style=display:flex><span>            max |= (1 &lt;&lt; i);
+</span></span><span style=display:flex><span>            curr = curr.children[toggledBit];
+</span></span><span style=display:flex><span>        } <span style=font-weight:700;text-decoration:underline>else</span> {
+</span></span><span style=display:flex><span>	        <span style=color:#888;font-style:italic>// if not, there is nothing to do except update the curr pointer</span>
+</span></span><span style=display:flex><span>            curr = curr.children[bit];
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>return</span> max;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 class=heading id=complexity-analysis>Complexity analysis
+<a class=anchor href=#complexity-analysis>#</a></h3><ul><li><strong>Time Complexity</strong>: $O(n × 32) = O(n)$, where n is array length and 32 is the number of bits in an integer.</li><li><strong>Space Complexity</strong>: $O(n × 32) = O(n)$ for the trie structure.</li></ul><h2 class=heading id=212-word-search-ii><a href=https://leetcode.com/problems/word-search-ii/>212. Word Search II</a>
+<a class=anchor href=#212-word-search-ii>#</a></h2><h3 class=heading id=problem-description-1>Problem description
+<a class=anchor href=#problem-description-1>#</a></h3><p>Given an <code>m x n</code> <code>board</code> of characters and a list of strings <code>words</code>, return <em>all words on the board</em>.</p><p>Each word must be constructed from letters of sequentially adjacent cells, where <strong>adjacent cells</strong> are horizontally or vertically neighboring. The same letter cell may not be used more than once in a word.</p><p><strong>Constraints:</strong></p><ul><li><code>m == board.length</code></li><li><code>n == board[i].length</code></li><li><code>1 &lt;= m, n &lt;= 12</code></li><li><code>board[i][j]</code> is a lowercase English letter.</li><li><code>1 &lt;= words.length &lt;= 3 * 104</code></li><li><code>1 &lt;= words[i].length &lt;= 10</code></li><li><code>words[i]</code> consists of lowercase English letters.</li><li>All the strings of <code>words</code> are unique.</li></ul><p>!(e.g. 1)[2.png]</p><p>!(e.g. 2)[3.png]</p><h3 class=heading id=naive-solution-1>Naive solution
+<a class=anchor href=#naive-solution-1>#</a></h3><p>A naive solution is to do a DFS, searching for every single word in <code>words</code>. Resulting in $O(M \cdot N \cdot W \cdot 4^{L})$ time complexity, where:</p><ul><li><code>M</code> and <code>N</code> are the size of the matrix</li><li><code>W</code> is the length of the input <code>words</code></li><li><code>4^L</code> is for one pass of DFS, where we search 4 directions for at most <code>L</code> steps. (<code>L</code> is the avg length of words)</li></ul><p>The naive solution is no doubt correct, but it fails for large input size as you can imagine:</p><p>!(A TLE test case)[4.png]</p><p>Let&rsquo;s first reason why our naive solution failed.</p><ul><li>Redundant Searches: If many words share the same prefix, the common prefix is searched for each word with a full pass of DFS -> duplicate searches.</li><li>No Early Termination: We continue DFS even when the current path cannot lead to any word in the dictionary.<ul><li>e.g., if the common prefix <code>aaaaaaa</code> (from the TLE test case shown above) does not exist in the matrix at all, we still perform a full DFS.<ul><li>!(A long common prefix exist for every keyword)[5.png]</li></ul></li><li>We should stop searching once we can tell the keyword doesn&rsquo;t exist at all.</li></ul></li><li>Inefficient Prefix Checking: For each cell and each word, we start from scratch without utilizing information from previous DFS. We do plain DFS over and over again.</li></ul><p>All the shortcomings mentioned above lead to poor scalability for the naive DFS approach.</p><h3 class=heading id=speed-up-by-storing-keywords-in-a-trie>Speed up by storing keywords in a trie
+<a class=anchor href=#speed-up-by-storing-keywords-in-a-trie>#</a></h3><p>Remember, the trie data structure is efficient for doing prefix matching. Besides, it can prune a lot of search space once the current char is not present in the trie, leading to early termination.</p><p>We can first insert all the keywords into a trie, after then we do a single round of DFS to search all possible word combinations. During the search, if the char in the current DFS call is not present in the trie, we are sure that there is no meaning to go further, so we backtrack.</p><p>This is how it works:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>Solution</span> {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> List&lt;String&gt; <span style=color:#666;font-weight:700;font-style:italic>findWords</span>(<span style=font-weight:700;text-decoration:underline>char</span>[][] board, String[] words) {
+</span></span><span style=display:flex><span>        m = board.length;
+</span></span><span style=display:flex><span>        n = board[0].length;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// insert words into the trie</span>
+</span></span><span style=display:flex><span>        buildTrie(words);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>int</span> i = 0; i &lt; m; ++i) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>int</span> j = 0; j &lt; n; ++j) {
+</span></span><span style=display:flex><span>                dfs(board, i, j, root);
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> res;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>dfs</span>(<span style=font-weight:700;text-decoration:underline>char</span>[][] board, <span style=font-weight:700;text-decoration:underline>int</span> x, <span style=font-weight:700;text-decoration:underline>int</span> y, TrieNode curr) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>char</span> c = board[x][y];
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> idx = c - <span style=color:#666;font-style:italic>&#39;a&#39;</span>;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[idx] == <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>return</span>;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        curr = curr.children[idx]; <span style=color:#888;font-style:italic>// update current TrieNode</span>
+</span></span><span style=display:flex><span>        board[x][y] = <span style=color:#666;font-style:italic>&#39;#&#39;</span>; <span style=color:#888;font-style:italic>// set a flag</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// match a word</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (<span style=font-weight:700;text-decoration:underline>null</span> != curr.key) {
+</span></span><span style=display:flex><span>            res.add(curr.key);
+</span></span><span style=display:flex><span>            curr.key = <span style=font-weight:700;text-decoration:underline>null</span>;
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>// shouldn&#39;t return here</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>int</span>[] dir : dirs) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> newX = x + dir[0], newY = y + dir[1];
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (newX &lt; 0 || newX &gt;= m || newY &lt; 0 || newY &gt;= n || <span style=color:#666;font-style:italic>&#39;#&#39;</span> == board[newX][newY]) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>continue</span>;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            dfs(board, newX, newY, curr);
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// backtrack</span>
+</span></span><span style=display:flex><span>        board[x][y] = c;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>TrieNode</span> {
+</span></span><span style=display:flex><span>        TrieNode[] children;
+</span></span><span style=display:flex><span>        String key;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=color:#666;font-weight:700;font-style:italic>TrieNode</span>() {
+</span></span><span style=display:flex><span>            children = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode[26];
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>buildTrie</span>(String[] words) {
+</span></span><span style=display:flex><span>        root = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode();
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (String w : words) {
+</span></span><span style=display:flex><span>            insert(w);
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>insert</span>(String word) {
+</span></span><span style=display:flex><span>        TrieNode curr = root;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> idx;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>char</span> c : word.toCharArray()) {
+</span></span><span style=display:flex><span>            idx = c - <span style=color:#666;font-style:italic>&#39;a&#39;</span>;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[idx] == <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>                curr.children[idx] = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode();
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            curr = curr.children[idx];
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        curr.key = word;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>int</span>[][] dirs = <span style=font-weight:700;text-decoration:underline>new</span> <span style=font-weight:700;text-decoration:underline>int</span>[][] {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>int</span> m;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>int</span> n;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> TrieNode root;
+</span></span><span style=display:flex><span>    List&lt;String&gt; res = <span style=font-weight:700;text-decoration:underline>new</span> LinkedList&lt;&gt;();
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>We first build the trie by inserting each <code>String</code> in <code>words</code>:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>buildTrie</span>(String[] words) {
+</span></span><span style=display:flex><span>    root = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode();
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>for</span> (String w : words) {
+</span></span><span style=display:flex><span>        insert(w);
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>insert</span>(String word) {
+</span></span><span style=display:flex><span>    TrieNode curr = root;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>int</span> idx;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>char</span> c : word.toCharArray()) {
+</span></span><span style=display:flex><span>        idx = c - <span style=color:#666;font-style:italic>&#39;a&#39;</span>;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[idx] == <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>            curr.children[idx] = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode();
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        curr = curr.children[idx];
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    curr.key = word;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Note that we store the keyword into the <code>TrieNode</code> if it represents the end of a keyword, so we don&rsquo;t need to bother manipulating chars along the DFS and backtracking:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>TrieNode</span> {
+</span></span><span style=display:flex><span>    TrieNode[] children;
+</span></span><span style=display:flex><span>    String key;  <span style=color:#888;font-style:italic>// directly stores key into the TrieNode</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=color:#666;font-weight:700;font-style:italic>TrieNode</span>() {
+</span></span><span style=display:flex><span>        children = <span style=font-weight:700;text-decoration:underline>new</span> TrieNode[26];
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Then, we do a DFS once for all:</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>dfs</span>(<span style=font-weight:700;text-decoration:underline>char</span>[][] board, <span style=font-weight:700;text-decoration:underline>int</span> x, <span style=font-weight:700;text-decoration:underline>int</span> y, TrieNode curr) {
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>char</span> c = board[x][y];
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>int</span> idx = c - <span style=color:#666;font-style:italic>&#39;a&#39;</span>;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>if</span> (curr.children[idx] == <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    curr = curr.children[idx]; <span style=color:#888;font-style:italic>// update current TrieNode</span>
+</span></span><span style=display:flex><span>    board[x][y] = <span style=color:#666;font-style:italic>&#39;#&#39;</span>; <span style=color:#888;font-style:italic>// set a flag</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// match a word</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>if</span> (<span style=font-weight:700;text-decoration:underline>null</span> != curr.key) {
+</span></span><span style=display:flex><span>        res.add(curr.key);
+</span></span><span style=display:flex><span>        curr.key = <span style=font-weight:700;text-decoration:underline>null</span>;
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// shouldn&#39;t return here</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>for</span> (<span style=font-weight:700;text-decoration:underline>int</span>[] dir : dirs) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> newX = x + dir[0], newY = y + dir[1];
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (newX &lt; 0 || newX &gt;= m || newY &lt; 0 || newY &gt;= n || <span style=color:#666;font-style:italic>&#39;#&#39;</span> == board[newX][newY]) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>continue</span>;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        dfs(board, newX, newY, curr);
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// backtrack</span>
+</span></span><span style=display:flex><span>    board[x][y] = c;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>return</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Two details to clarify:</p><ol><li>Since we directly store keywords into <code>TrieNode</code>, if there is a match, we add the key into res and delete it to avoid duplicate keyword in the final res:</li></ol><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=color:#888;font-style:italic>// match a word</span>
+</span></span><span style=display:flex><span><span style=font-weight:700;text-decoration:underline>if</span> (<span style=font-weight:700;text-decoration:underline>null</span> != curr.key) {
+</span></span><span style=display:flex><span>    res.add(curr.key);
+</span></span><span style=display:flex><span>    curr.key = <span style=font-weight:700;text-decoration:underline>null</span>;
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// shouldn&#39;t return here</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ol start=2><li>We use the matrix itself to denote whether or not we have visited a cell before—by setting the cell to a special char (in our example, a <code>#</code>) and resetting it back when we backtrack. This is a very common technique to use for DFS/backtracking problems.</li></ol><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>dfs</span>(<span style=font-weight:700;text-decoration:underline>char</span>[][] board, <span style=font-weight:700;text-decoration:underline>int</span> x, <span style=font-weight:700;text-decoration:underline>int</span> y, TrieNode curr) {
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// recording the original char</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>char</span> c = board[x][y];
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// ...</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#888;font-style:italic>// setting the char into `#`</span>
+</span></span><span style=display:flex><span>    board[x][y] = <span style=color:#666;font-style:italic>&#39;#&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// ...</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// resetting the char</span>
+</span></span><span style=display:flex><span>    board[x][y] = c;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>return</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 class=heading id=complexity-analysis-1>Complexity analysis
+<a class=anchor href=#complexity-analysis-1>#</a></h3><p>$O(M \cdot N \cdot W \cdot 4^{L})$</p><ul><li><strong>Time complexity</strong>: $O(W \cdot L + M \cdot N \cdot 4^{L})$, where<ul><li>$O(W \cdot L)$ is used for building the trie, <code>W</code> is the length of <code>words</code>, and <code>L</code> is the avg word length</li><li>$O(M \cdot N \cdot 4^L)$ is for the DFS part. This time we only perform one pass of DFS with pruning, leading to roughly $W \cdot M \cdot N \cdot 4^L$ times speed up.</li></ul></li><li><strong>Space complexity</strong>: $O(W \cdot L)$ for storing the keywords in the trie.</li></ul></div></article><div class=single-comments><script src=https://giscus.app/client.js data-repo data-repo-id data-category data-category-id data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=0 data-input-position=top data-theme=light data-lang=en data-loading=lazy crossorigin=anonymous async></script></div><div class=single-pagination><hr><div class=flexnowrap><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/blog/1_langchain_ai_agent_framework/>Code Analysis of LangChain AI Agent Implementation</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/blog/3_leetcode_sliding_window/>LeetCode Sliding Window Problems</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>Powered by
+<a href=https://gohugo.io/>Hugo</a>
+and
+<a href=https://github.com/tomfran/typo>tomfran/typo</a></p></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js onload=renderMathInElement(document.body)></script><script>document.addEventListener("DOMContentLoaded",function(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}]})})</script></body><script src=/js/theme-switch.js></script><script defer src=/js/copy-code.js></script></html>

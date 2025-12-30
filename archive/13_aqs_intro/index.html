@@ -1,0 +1,482 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://caffcen.github.io/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://caffcen.github.io/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://caffcen.github.io/favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://caffcen.github.io/android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://caffcen.github.io/apple-touch-icon.png><meta name=description content><title>AbstractQueuedSynchronizer 简介 | Lihang Liu's Homepage</title><link rel=canonical href=https://caffcen.github.io/archive/13_aqs_intro/><meta property="og:url" content="https://caffcen.github.io/archive/13_aqs_intro/"><meta property="og:site_name" content="Lihang Liu's Homepage"><meta property="og:title" content="AbstractQueuedSynchronizer 简介"><meta property="og:description" content="深入解析Java并发编程核心框架AQS的设计原理、实现机制及其在独占锁和共享锁模式下的工作流程"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="archive"><meta property="article:published_time" content="2023-05-21T16:04:33+08:00"><meta property="article:modified_time" content="2025-11-23T14:50:26-05:00"><link rel=stylesheet href=/assets/combined.min.57df9e7d692553f966cff4593ede6b53efb74da234876bacffeac774bd572e53.css media=all></head><body class=auto><div class=content><header><div class=header><h1 class=header-title><a href=https://caffcen.github.io/>Lihang Liu's Homepage</a></h1><div class=header-menu><p class=small><a href=/>/Home</a></p><p class=small><a href=/blog/>/Blog</a></p><p class=small><a href=/archive/>/Archive</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a><span class=breadcrumbs-separator>/</span><a href=/archive/>Archive</a><span class=breadcrumbs-separator>/</span>
+<a href=/archive/13_aqs_intro/>AbstractQueuedSynchronizer 简介</a></div><div><article><header class=single-intro-container><h1 class=single-title>AbstractQueuedSynchronizer 简介</h1><p class=single-summary>深入解析Java并发编程核心框架AQS的设计原理、实现机制及其在独占锁和共享锁模式下的工作流程</p><div class=single-subsummary><div><p class=single-date><time datetime=2023-05-21T16:04:33+08:00>May 21, 2023</time></p></div></div></header><div class=single-content><p>本文主要介绍了 JUC 中的 <code>AbstractQueuedSynchronizer</code> 的实现基础、其和 CLH 队列锁之间的关联、独占锁模式及共享锁模式加解锁的过程等。不包含 <code>ConditionObject</code> 的分析。</p><h1 class=heading id=简介>简介
+<a class=anchor href=#%e7%ae%80%e4%bb%8b>#</a></h1><p>AQS 提供了实现同步阻塞队列的基本框架，是 juc 包中其他众多同步原语和锁实现的基础。</p><blockquote><p>Provides a framework for implementing blocking locks and related synchronizers (semaphores, events, etc) that rely on first-in-first-out (FIFO) wait queues. This class is designed to be a useful basis for most kinds of synchronizers that rely on a single atomic int value to represent state. Subclasses must define the protected methods that change this state, and which define what that state means in terms of this object being acquired or released. Given these, the other methods in this class carry out all queuing and blocking mechanics. Subclasses can maintain other state fields, but only the atomically updated int value manipulated using methods getState, setState and compareAndSetState is tracked with respect to synchronization.
+S
+以上片段摘录自 AQS 源码中的注释，可以总结出以下几点：</p></blockquote><ul><li>AQS 提供了一种基于先入先出 FIFO 等待队列的线程同步框架；</li><li>AQS 被设计为其他同步器实现的基础，其他同步器需要在内部实现 AQS 的模板方法，来实现自己的同步原语。</li></ul><h1 class=heading id=node-数据结构>Node 数据结构
+<a class=anchor href=#node-%e6%95%b0%e6%8d%ae%e7%bb%93%e6%9e%84>#</a></h1><p><code>Node</code> 结构是 AQS 阻塞队列实现的基础结构，是 AQS 排队、获取锁、释放锁等行为被操作的对象。 <code>Node</code> 代表的其实就是想要获取锁的线程，每一个 <code>Node</code> 对象都是对一个想要获取锁的线程的封装和表示，其实现基于 CLH Queue Lock 中的节点数据结构，关于 CLH Queue Lock，可以参考笔者之前的博客（<a href=https://caffcen.github.io/2023/04/09/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3-CLH-Queue-Lock/>深入理解 CLH Queue Lock | caffcen&rsquo;s blog</a>）：</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>Node</span> {
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Node SHARED = <span style=font-weight:700;text-decoration:underline>new</span> Node();  <span style=color:#888;font-style:italic>// 节点处于共享等待的标识</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Node EXCLUSIVE = <span style=font-weight:700;text-decoration:underline>null</span>;  <span style=color:#888;font-style:italic>// 节点处于独占等待的标识</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>int</span> CANCELLED = 1;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>int</span> SIGNAL = -1;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>int</span> CONDITION = -2;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>int</span> PROPAGATE = -3;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>volatile</span> <span style=font-weight:700;text-decoration:underline>int</span> waitStatus;  <span style=color:#888;font-style:italic>// 线程的状态</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>volatile</span> Node prev;  <span style=color:#888;font-style:italic>// 前驱节点</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>volatile</span> Node next;  <span style=color:#888;font-style:italic>// 后继节点</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>volatile</span> Thread thread;  <span style=color:#888;font-style:italic>// 节点对应的线程</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    Node nextWaiter;  <span style=color:#888;font-style:italic>// 指向下一个等待在条件变量上的节点</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p><code>waitStatus</code> 可能有几种取值：</p><ol><li><code>0</code> : 节点初始化时候的值</li><li><code>CANCELLED = 1</code> : 表示节点由于超时或者被打断，『取消』排队</li><li><code>SIGNAL = -1</code> : 当前节点如果是 <code>SIGNAL</code> 则表示后继结点需要被唤醒，或者换过来说，如果当前节点想要被唤醒并尝试获取锁，则需要前驱节点的 <code>waitStatus</code> 是 <code>SIGNAL</code></li><li><code>CONDITION = -2</code> : 表示节点位于条件变量的等待队列中</li><li><code>PROPAGATE = -3</code> : 仅在释放共享锁时使用到</li></ol><p><code>Node</code> 类是构建起 AQS 阻塞双向队列的基础节点数据结构， <code>prev</code> 和 <code>next</code> 变量实现了双向队列， <code>waitStatus</code> 表示节点对应的线程的等待状态。</p><h1 class=heading id=aqs-队列>AQS 队列
+<a class=anchor href=#aqs-%e9%98%9f%e5%88%97>#</a></h1><p>AQS 双向等待 FIFO 队列的实现基于上面提到 <code>Node</code> 数据结构：</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>AbstractQueuedSynchronizer</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractOwnableSynchronizer
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> java.io.Serializable {
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Head of the wait queue, lazily initialized.  Except for
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * initialization, it is modified only via method setHead.  Note:
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * If head exists, its waitStatus is guaranteed not to be
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * CANCELLED.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>transient</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>volatile</span> Node head;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Tail of the wait queue, lazily initialized.  Modified only via
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * method enq to add new wait node.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>transient</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>volatile</span> Node tail;
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * The synchronization state.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>volatile</span> <span style=font-weight:700;text-decoration:underline>int</span> state;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p><code>state</code> 字段是 AQS 的同步状态字段，主要通过 <code>compareAndSetState</code> （内部实现基于 Unsafe 的 CAS 操作）进行原子地更新。</p><h2 class=heading id=线程节点入队>线程节点入队
+<a class=anchor href=#%e7%ba%bf%e7%a8%8b%e8%8a%82%e7%82%b9%e5%85%a5%e9%98%9f>#</a></h2><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>AbstractQueuedSynchronizer</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractOwnableSynchronizer
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Inserts node into queue, initializing if necessary. See picture above.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param node the node to insert
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return node&#39;s predecessor
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> Node <span style=color:#666;font-weight:700;font-style:italic>enq</span>(<span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Node node) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (;;) {
+</span></span><span style=display:flex><span>            Node t = tail;  <span style=color:#888;font-style:italic>// 获取队列尾部节点</span>
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>// 如果没有初始化，则原子地设置 head</span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (t == <span style=font-weight:700;text-decoration:underline>null</span>) { <span style=color:#888;font-style:italic>// Must initialize</span>
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (compareAndSetHead(<span style=font-weight:700;text-decoration:underline>new</span> Node()))
+</span></span><span style=display:flex><span>                    tail = head;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> {
+</span></span><span style=display:flex><span>                node.prev = t;  <span style=color:#888;font-style:italic>// node 将要成为队列的新 tail，因此更新 t 为 node 的前驱节点</span>
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (compareAndSetTail(t, node)) {  <span style=color:#888;font-style:italic>// 原子地更新</span>
+</span></span><span style=display:flex><span>                    t.next = node;
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>return</span> t;  <span style=color:#888;font-style:italic>// 更新成功则返回 node 的前驱节点，否则进入下一次循环直至成功</span>
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Creates and enqueues node for current thread and given mode.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param mode Node.EXCLUSIVE for exclusive, Node.SHARED for shared
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return the new node
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> Node <span style=color:#666;font-weight:700;font-style:italic>addWaiter</span>(Node mode) {
+</span></span><span style=display:flex><span>        Node node = <span style=font-weight:700;text-decoration:underline>new</span> Node(Thread.currentThread(), mode);
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// Try the fast path of enq; backup to full enq on failure</span>
+</span></span><span style=display:flex><span>        Node pred = tail;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (pred != <span style=font-weight:700;text-decoration:underline>null</span>) {
+</span></span><span style=display:flex><span>            node.prev = pred;
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>// 尝试原子地更新尾结点，如果成功则直接返回，否则调用 enq 入队</span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (compareAndSetTail(pred, node)) {
+</span></span><span style=display:flex><span>                pred.next = node;
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>return</span> node;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// 快速入队失败，调用 enq 入队</span>
+</span></span><span style=display:flex><span>        enq(node);
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> node;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 class=heading id=线程节点出队>线程节点出队
+<a class=anchor href=#%e7%ba%bf%e7%a8%8b%e8%8a%82%e7%82%b9%e5%87%ba%e9%98%9f>#</a></h2><p>节点出队列则很简单，把 <code>head</code> 设为当前节点即可：</p><blockquote><p>To dequeue, you just set the head field.</p></blockquote><h1 class=heading id=模板方法>模板方法
+<a class=anchor href=#%e6%a8%a1%e6%9d%bf%e6%96%b9%e6%b3%95>#</a></h1><blockquote><p>Subclasses should be defined as non-public internal helper classes that are used to implement the synchronization properties of their enclosing class. Class AbstractQueuedSynchronizer does not implement any synchronization interface. Instead it defines methods such as acquireInterruptibly that can be invoked as appropriate by concrete locks and related synchronizers to implement their public methods.</p></blockquote><p>AQS 是非常优秀的模板模式的实现和应用，它提供以下模板方法供实现类实现，以达到不同的同步原语以及同步器机制：</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>AbstractQueuedSynchronizer</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractOwnableSynchronizer
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> java.io.Serializable {
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>tryAcquire</span>(<span style=font-weight:700;text-decoration:underline>int</span> arg);  <span style=color:#888;font-style:italic>// 尝试获取独占锁</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>tryRelease</span>(<span style=font-weight:700;text-decoration:underline>int</span> arg);  <span style=color:#888;font-style:italic>// 尝试释放独占锁</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;text-decoration:underline>int</span> <span style=color:#666;font-weight:700;font-style:italic>tryAcquireShared</span>(<span style=font-weight:700;text-decoration:underline>int</span> arg);  <span style=color:#888;font-style:italic>// 尝试获取共享锁</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>tryReleaseShared</span>(<span style=font-weight:700;text-decoration:underline>int</span> arg);  <span style=color:#888;font-style:italic>// 尝试释放共享锁</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>isHeldExclusively</span>();  <span style=color:#888;font-style:italic>// 返回共享资源是否以独占的方式被占用</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 class=heading id=reentrantlock-如何实现-aqs>ReentrantLock 如何实现 AQS
+<a class=anchor href=#reentrantlock-%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0-aqs>#</a></h2><p>我们以 <code>ReentrantLock</code> 为例来看一下 juc 包中的同步器和 AQS 是如何搭配使用的：</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>ReentrantLock</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> Lock, java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>Sync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractQueuedSynchronizer {
+</span></span><span style=display:flex><span>		<span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>nonfairTryAcquire</span>(<span style=font-weight:700;text-decoration:underline>int</span> acquires) {...}
+</span></span><span style=display:flex><span>	    <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>tryRelease</span>(<span style=font-weight:700;text-decoration:underline>int</span> releases) {...}
+</span></span><span style=display:flex><span>	    <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>isHeldExclusively</span>() {...}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>NonfairSync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> Sync {
+</span></span><span style=display:flex><span>		<span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>tryAcquire</span>(<span style=font-weight:700;text-decoration:underline>int</span> acquires) {...}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>FairSync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> Sync {
+</span></span><span style=display:flex><span>		<span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>tryAcquire</span>(<span style=font-weight:700;text-decoration:underline>int</span> acquires) {...}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p><code>ReentrantLock</code> 内部类 <code>Sync</code> 继承了 AQS，同时实现了 <code>tryRelease</code> 接口来释放锁，同时，为了同时实现公平锁和非公平锁的加锁逻辑， <code>ReentrantLock</code> 还提供了 <code>NonfairSync</code> 和 <code>FairSync</code> 来实现不同的 <code>tryAcquire</code> 逻辑。</p><p>可见 AQS 负责维护队列状态、更新同步状态等底层操作，这些操作对任何的同步器都是相同的，并且暴露出了 5 个模板接口供实现类实现，这样实现类仅仅需要关注自己的同步原语的实现即可，不用关注相同的底层逻辑。</p><h1 class=heading id=独占锁模式>独占锁模式
+<a class=anchor href=#%e7%8b%ac%e5%8d%a0%e9%94%81%e6%a8%a1%e5%bc%8f>#</a></h1><h2 class=heading id=独占锁模式下的加锁操作>独占锁模式下的加锁操作
+<a class=anchor href=#%e7%8b%ac%e5%8d%a0%e9%94%81%e6%a8%a1%e5%bc%8f%e4%b8%8b%e7%9a%84%e5%8a%a0%e9%94%81%e6%93%8d%e4%bd%9c>#</a></h2><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>AbstractQueuedSynchronizer</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractOwnableSynchronizer
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Acquires in exclusive mode, ignoring interrupts.  Implemented
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * by invoking at least once {@link #tryAcquire},
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * returning on success.  Otherwise the thread is queued, possibly
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * repeatedly blocking and unblocking, invoking {@link
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * #tryAcquire} until success.  This method can be used
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * to implement method {@link Lock#lock}.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param arg the acquire argument.  This value is conveyed to
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *        {@link #tryAcquire} but is otherwise uninterpreted and
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *        can represent anything you like.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>acquire</span>(<span style=font-weight:700;text-decoration:underline>int</span> arg) {
+</span></span><span style=display:flex><span>	    <span style=color:#888;font-style:italic>// 尝试获取锁，如果获取成功直接返回</span>
+</span></span><span style=display:flex><span>	    <span style=color:#888;font-style:italic>// tryAcquire 由具体的同步器实现</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (!tryAcquire(arg) &amp;&amp;
+</span></span><span style=display:flex><span>            acquireQueued(addWaiter(Node.EXCLUSIVE), arg))  <span style=color:#888;font-style:italic>// 无法获取到资源，先加入队列，再尝试获取</span>
+</span></span><span style=display:flex><span>            selfInterrupt();  <span style=color:#888;font-style:italic>// 中断当前线程</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Acquires in exclusive uninterruptible mode for thread already in
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * queue. Used by condition wait methods as well as acquire.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param node the node
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param arg the acquire argument
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return {@code true} if interrupted while waiting
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>acquireQueued</span>(<span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Node node, <span style=font-weight:700;text-decoration:underline>int</span> arg) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>boolean</span> failed = <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>try</span> {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>boolean</span> interrupted = <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>for</span> (;;) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Node p = node.predecessor();  <span style=color:#888;font-style:italic>// 取前置节点</span>
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (p == head &amp;&amp; tryAcquire(arg)) {
+</span></span><span style=display:flex><span>				<span style=color:#888;font-style:italic>// 只有前置节点已经获取了锁，即前置节点成为了队列的 head 也就是出队时，尝试获取锁</span>
+</span></span><span style=display:flex><span>                    setHead(node);  <span style=color:#888;font-style:italic>// 获取锁成功，出队列，返回</span>
+</span></span><span style=display:flex><span>                    p.next = <span style=font-weight:700;text-decoration:underline>null</span>; <span style=color:#888;font-style:italic>// help GC</span>
+</span></span><span style=display:flex><span>                    failed = <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>return</span> interrupted;
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 获取锁失败，调用 shouldParkAfterFailedAcquire 看是否需要睡眠当前线程</span>
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (shouldParkAfterFailedAcquire(p, node) &amp;&amp;
+</span></span><span style=display:flex><span>                    parkAndCheckInterrupt())
+</span></span><span style=display:flex><span>                    interrupted = <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        } <span style=font-weight:700;text-decoration:underline>finally</span> {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (failed)
+</span></span><span style=display:flex><span>                cancelAcquire(node);
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Checks and updates status for a node that failed to acquire.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Returns true if thread should block. This is the main signal
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * control in all acquire loops.  Requires that pred == node.prev.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param pred node&#39;s predecessor holding status
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param node the node
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return {@code true} if thread should block
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>shouldParkAfterFailedAcquire</span>(Node pred, Node node) {
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// 取前置节点的 waitStatus</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> ws = pred.waitStatus;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (ws == Node.SIGNAL)
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>/*
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             * This node has already set status asking a release
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             * to signal it, so it can safely park.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             */</span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>true</span>;  <span style=color:#888;font-style:italic>// 前置节点的 SIGNAL 已设置，当前可以安全地睡眠，返回 true</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (ws &gt; 0) {
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>/*
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             * Predecessor was cancelled. Skip over predecessors and
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             * indicate retry.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             */</span>
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>// 前驱节点对应的线程不再尝试获取锁，不断往前遍历知道找到一个状态为非取消的节点</span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>do</span> {
+</span></span><span style=display:flex><span>                node.prev = pred = pred.prev;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>while</span> (pred.waitStatus &gt; 0);
+</span></span><span style=display:flex><span>            pred.next = node;
+</span></span><span style=display:flex><span>        } <span style=font-weight:700;text-decoration:underline>else</span> {
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>/*
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             * waitStatus must be 0 or PROPAGATE.  Indicate that we
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             * need a signal, but don&#39;t park yet.  Caller will need to
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             * retry to make sure it cannot acquire before parking.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>             */</span>
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>// 设置前驱节点的状态为 SIGNAL，之后当前线程才能够被唤醒</span>
+</span></span><span style=display:flex><span>            compareAndSetWaitStatus(pred, ws, Node.SIGNAL);
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Convenience method to park and then check if interrupted
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return {@code true} if interrupted
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>parkAndCheckInterrupt</span>() {
+</span></span><span style=display:flex><span>        LockSupport.park(<span style=font-weight:700;text-decoration:underline>this</span>);
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> Thread.interrupted();
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>总结一下加锁过程：</p><ul><li>调用 <code>acquire</code> 获取锁， <code>acquire</code> 内部调用同步器内部类实现的 <code>tryAcquire</code> 尝试获取锁，加锁成功则直接返回，否则将线程节点加入等待队列中，并调用 <code>acquireQueued</code> 继续尝试获取锁；</li><li><code>acquireQueued</code> 有一个无限循环来不断尝试获取锁。当前驱节点为 <code>head</code> 时才会调用 <code>tryAcquire</code> 来获取锁，这和 CLH 队列锁的加锁操作如出一辙：只有等前驱节点成功获取锁并解锁后，当前节点才能够取获取锁。这里贴出了 CLH 队列锁加锁的代码供对比参考：</li></ul><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>CLHLock</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> Lock {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>lock</span>() {
+</span></span><span style=display:flex><span>        QNode qnode = myNode.get();
+</span></span><span style=display:flex><span>        qnode.locked = <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>        QNode pred = tail.getAndSet(qnode);
+</span></span><span style=display:flex><span>        myPred.set(pred);
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>while</span> (pred.locked) {
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li><code>acquireQueued</code> 如果加锁成功，那么则会将 <code>head</code> 设为当前节点，将当前节点出队并返回；否则调用 <code>shouldParkAfterFailedAcquire</code></li><li><code>shouldParkAfterFailedAcquire</code> 方法是用来在当前线程没有成功获取到锁时，检查并更新节点状态的。其有几个功能：<ol><li>判断当前线程是否能够『安全地』休眠，即判断前驱结点的 <code>waitStatus</code> 是否为 <code>SIGNAL</code> ；</li><li>如果前驱节点取消了排队，则不断往前寻找一个未取消的节点，当做当前节点的前置节点；</li><li>如果前驱节点的 <code>waitStatus</code> 不为 <code>SIGNAL</code> ，则原子性的更新为 <code>SIGNAL</code> ，方便当前节点之后被阻塞</li><li>返回当前线程是否能够休眠；</li></ol></li></ul><p>总的来说，AQS 共享锁的加锁逻辑和 CLH 队列锁的加锁逻辑本质上是相同的：当前线程只有在它的前驱节点的线程获取到锁之后，才可以尝试去获取锁，且它们都采用的是一种自旋忙等待的方式，不断地测试前置节点的状态来实现的。</p><p>不同点在于 AQS 通过 <code>shouldParkAfterFailedAcquire</code> 方法可以让当前忙等待的线程被阻塞，好让出 CPU 时间。</p><h2 class=heading id=独占锁模式下的解锁操作>独占锁模式下的解锁操作
+<a class=anchor href=#%e7%8b%ac%e5%8d%a0%e9%94%81%e6%a8%a1%e5%bc%8f%e4%b8%8b%e7%9a%84%e8%a7%a3%e9%94%81%e6%93%8d%e4%bd%9c>#</a></h2><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>AbstractQueuedSynchronizer</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractOwnableSynchronizer
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Releases in exclusive mode.  Implemented by unblocking one or
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * more threads if {@link #tryRelease} returns true.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * This method can be used to implement method {@link Lock#unlock}.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param arg the release argument.  This value is conveyed to
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *        {@link #tryRelease} but is otherwise uninterpreted and
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *        can represent anything you like.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return the value returned from {@link #tryRelease}
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>release</span>(<span style=font-weight:700;text-decoration:underline>int</span> arg) {
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// 调用同步器实现的 tryRelease</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (tryRelease(arg)) {
+</span></span><span style=display:flex><span>            Node h = head;
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>// 如果成功释放，则调用 unparkSuccessor 唤醒可能在睡眠的后继节点线程</span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (h != <span style=font-weight:700;text-decoration:underline>null</span> &amp;&amp; h.waitStatus != 0)
+</span></span><span style=display:flex><span>                unparkSuccessor(h);
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Wakes up node&#39;s successor, if one exists.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param node the node
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>unparkSuccessor</span>(Node node) {
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>/*
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * If status is negative (i.e., possibly needing signal) try
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * to clear in anticipation of signalling.  It is OK if this
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * fails or if status is changed by waiting thread.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         */</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> ws = node.waitStatus;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (ws &lt; 0)
+</span></span><span style=display:flex><span>            compareAndSetWaitStatus(node, ws, 0);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>/*
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * Thread to unpark is held in successor, which is normally
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * just the next node.  But if cancelled or apparently null,
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * traverse backwards from tail to find the actual
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * non-cancelled successor.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         */</span>
+</span></span><span style=display:flex><span>        Node s = node.next;
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// 如果后继节点取消了排队，则从 tail 开始往队列头部遍历，找到 node 后第一个未取消排队的节点</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (s == <span style=font-weight:700;text-decoration:underline>null</span> || s.waitStatus &gt; 0) {
+</span></span><span style=display:flex><span>            s = <span style=font-weight:700;text-decoration:underline>null</span>;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>for</span> (Node t = tail; t != <span style=font-weight:700;text-decoration:underline>null</span> &amp;&amp; t != node; t = t.prev)
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (t.waitStatus &lt;= 0)
+</span></span><span style=display:flex><span>                    s = t;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// 如果后继节点存在，则唤醒它</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (s != <span style=font-weight:700;text-decoration:underline>null</span>)
+</span></span><span style=display:flex><span>            LockSupport.unpark(s.thread);
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>独占模式下解锁的操作则简单很多，主要工作是唤醒当前节点的后继节点。</p><h1 class=heading id=共享锁模式>共享锁模式
+<a class=anchor href=#%e5%85%b1%e4%ba%ab%e9%94%81%e6%a8%a1%e5%bc%8f>#</a></h1><h2 class=heading id=共享锁模式下的加锁操作>共享锁模式下的加锁操作
+<a class=anchor href=#%e5%85%b1%e4%ba%ab%e9%94%81%e6%a8%a1%e5%bc%8f%e4%b8%8b%e7%9a%84%e5%8a%a0%e9%94%81%e6%93%8d%e4%bd%9c>#</a></h2><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>AbstractQueuedSynchronizer</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractOwnableSynchronizer
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Acquires in shared mode, ignoring interrupts.  Implemented by
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * first invoking at least once {@link #tryAcquireShared},
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * returning on success.  Otherwise the thread is queued, possibly
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * repeatedly blocking and unblocking, invoking {@link
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * #tryAcquireShared} until success.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param arg the acquire argument.  This value is conveyed to
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *        {@link #tryAcquireShared} but is otherwise uninterpreted
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *        and can represent anything you like.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>acquireShared</span>(<span style=font-weight:700;text-decoration:underline>int</span> arg) {
+</span></span><span style=display:flex><span>	    <span style=color:#888;font-style:italic>// 调用同步器实现的 tryAcquireShared 方法</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (tryAcquireShared(arg) &lt; 0)
+</span></span><span style=display:flex><span>	        <span style=color:#888;font-style:italic>// 失败，调用 doAcquireShared 方法继续不断尝试</span>
+</span></span><span style=display:flex><span>            doAcquireShared(arg);
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Acquires in shared uninterruptible mode.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param arg the acquire argument
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>doAcquireShared</span>(<span style=font-weight:700;text-decoration:underline>int</span> arg) {
+</span></span><span style=display:flex><span>	    <span style=color:#888;font-style:italic>// 获取锁失败，现将线程入队</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Node node = addWaiter(Node.SHARED);
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>boolean</span> failed = <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>try</span> {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>boolean</span> interrupted = <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>for</span> (;;) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Node p = node.predecessor();
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 和独占模式相同，只有前置节点为 head 时才能够尝试获取锁</span>
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (p == head) {
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>int</span> r = tryAcquireShared(arg);
+</span></span><span style=display:flex><span>                    <span style=color:#888;font-style:italic>// r &gt;= 0 表示获取锁成功</span>
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>if</span> (r &gt;= 0) {
+</span></span><span style=display:flex><span>	                    <span style=color:#888;font-style:italic>// 当前线程出队，并将 release 信息传播给后继节点</span>
+</span></span><span style=display:flex><span>                        setHeadAndPropagate(node, r);
+</span></span><span style=display:flex><span>                        p.next = <span style=font-weight:700;text-decoration:underline>null</span>; <span style=color:#888;font-style:italic>// help GC</span>
+</span></span><span style=display:flex><span>                        <span style=font-weight:700;text-decoration:underline>if</span> (interrupted)
+</span></span><span style=display:flex><span>                            selfInterrupt();
+</span></span><span style=display:flex><span>                        failed = <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>                        <span style=font-weight:700;text-decoration:underline>return</span>;
+</span></span><span style=display:flex><span>                    }
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 获取锁失败，判断是否需要休眠</span>
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (shouldParkAfterFailedAcquire(p, node) &amp;&amp;
+</span></span><span style=display:flex><span>                    parkAndCheckInterrupt())
+</span></span><span style=display:flex><span>                    interrupted = <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        } <span style=font-weight:700;text-decoration:underline>finally</span> {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (failed)
+</span></span><span style=display:flex><span>                cancelAcquire(node);
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Sets head of queue, and checks if successor may be waiting
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * in shared mode, if so propagating if either propagate &gt; 0 or
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * PROPAGATE status was set.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param node the node
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param propagate the return value from a tryAcquireShared
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>setHeadAndPropagate</span>(Node node, <span style=font-weight:700;text-decoration:underline>int</span> propagate) {
+</span></span><span style=display:flex><span>        Node h = head; <span style=color:#888;font-style:italic>// Record old head for check below</span>
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>// 设置 head 为当前节点，表示当前节点已经获取到了临界资源，出队</span>
+</span></span><span style=display:flex><span>        setHead(node);
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>/*
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * Try to signal next queued node if:
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         *   Propagation was indicated by caller,
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         *     or was recorded (as h.waitStatus either before
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         *     or after setHead) by a previous operation
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         *     (note: this uses sign-check of waitStatus because
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         *      PROPAGATE status may transition to SIGNAL.)
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * and
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         *   The next node is waiting in shared mode,
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         *     or we don&#39;t know, because it appears null
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * The conservatism in both of these checks may cause
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * unnecessary wake-ups, but only when there are multiple
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * racing acquires/releases, so most need signals now or soon
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * anyway.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         */</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (propagate &gt; 0 || h == <span style=font-weight:700;text-decoration:underline>null</span> || h.waitStatus &lt; 0 ||
+</span></span><span style=display:flex><span>            (h = head) == <span style=font-weight:700;text-decoration:underline>null</span> || h.waitStatus &lt; 0) {
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>// 当满足任一条件时，则唤醒后继节点让其尝试进入临界区</span>
+</span></span><span style=display:flex><span>            Node s = node.next;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (s == <span style=font-weight:700;text-decoration:underline>null</span> || s.isShared())
+</span></span><span style=display:flex><span>                doReleaseShared();
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Release action for shared mode -- signals successor and ensures
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * propagation. (Note: For exclusive mode, release just amounts
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * to calling unparkSuccessor of head if it needs signal.)
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>doReleaseShared</span>() {
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>/*
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * Ensure that a release propagates, even if there are other
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * in-progress acquires/releases.  This proceeds in the usual
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * way of trying to unparkSuccessor of head if it needs
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * signal. But if it does not, status is set to PROPAGATE to
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * ensure that upon release, propagation continues.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * Additionally, we must loop in case a new node is added
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * while we are doing this. Also, unlike other uses of
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * unparkSuccessor, we need to know if CAS to reset status
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * fails, if so rechecking.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         */</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>for</span> (;;) {
+</span></span><span style=display:flex><span>            Node h = head;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (h != <span style=font-weight:700;text-decoration:underline>null</span> &amp;&amp; h != tail) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>int</span> ws = h.waitStatus;
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (ws == Node.SIGNAL) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 当 waitStatus 为 SIGNAL 时，需要唤醒后继节点</span>
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>if</span> (!compareAndSetWaitStatus(h, Node.SIGNAL, 0))
+</span></span><span style=display:flex><span>                    <span style=color:#888;font-style:italic>// recheck 保证线程安全</span>
+</span></span><span style=display:flex><span>                        <span style=font-weight:700;text-decoration:underline>continue</span>;            <span style=color:#888;font-style:italic>// loop to recheck cases</span>
+</span></span><span style=display:flex><span>                    <span style=color:#888;font-style:italic>// 唤醒后继节点</span>
+</span></span><span style=display:flex><span>                    unparkSuccessor(h);
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (ws == 0 &amp;&amp;
+</span></span><span style=display:flex><span>                         !compareAndSetWaitStatus(h, 0, Node.PROPAGATE))
+</span></span><span style=display:flex><span>                    <span style=color:#888;font-style:italic>// 为了保证将唤醒操作传播出去，需要设置 waitStatus 为 PROPAGATE</span>
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>continue</span>;                <span style=color:#888;font-style:italic>// loop on failed CAS</span>
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>// 如果 head 变更，说明有其他节点也成功释放了临界资源，它将会负责唤醒后继的阻塞节点，当前线程可以退出循环</span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (h == head)                   <span style=color:#888;font-style:italic>// loop if head changed</span>
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>break</span>;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>共享模式和独占模式加锁的区别主要是：</p><ol><li>可以有多个线程同时尝试获取锁；独占模式只能有一个；</li><li>共享锁模式下，如果一个线程成功获取到了锁，那么它还会同时尝试去唤醒其他等待着的线程；而独占模式只有在解锁后才会去唤醒队列中阻塞的节点。</li></ol><p>共享锁模式比较重要的是 <code>setHeadAndPropagate</code> 和 <code>doReleaseShared</code> 。 <code>setHeadAndPropagate</code> 会进行两个操作：</p><ol><li>将获取了锁的线程出队，即将 <code>head</code> 设为当前节点；</li><li>满足一下条件时，调用 <code>doReleaseShared</code> 唤醒队列中阻塞的线程：<ol><li><code>propagate > 0</code> : 表示还有资源剩余可以索取</li><li><code>h == null</code></li><li><code>h.waitStatus &lt; 0</code></li><li><code>(h = head) == null</code></li><li><code>h.waitStatus &lt; 0</code></li></ol></li></ol><p><code>doReleaseShared</code> 则是在尝试不断地唤醒符合条件的节点。</p><p>总结一下共享模式加锁：</p><ul><li>调用 <code>acquireShared</code> 加锁。会调用同步器实现的 <code>tryAcquireShared</code> 方法尝试获取锁，如果成功直接返回；否则调用 <code>doAcquireShared</code></li><li><code>doAcquireShared</code> 首先会将当前线程入队；之后则会尝试获取锁：<ul><li>先判断自己的前驱节点是否是 <code>head</code> ，是的话则尝试获取锁，如果成功则调用 <code>setHeadAndPropagate</code> ，将 <code>head</code> 设置为自己，同时唤醒队列中阻塞的节点</li><li>如果自己的前驱节点不是 <code>head</code> ，又或者获取锁失败，则调用 <code>shouldParkAfterFailedAcquire</code> 判断自己是否需要休眠，这和独占锁模式是一模一样的</li></ul></li><li><code>setHeadAndPropagate</code> 首先将当前获得了共享锁的节点出队，之后在满足条件的情况下，尝试唤醒队列中被阻塞的线程</li><li><code>doReleaseShared</code> 不断尝试唤醒被阻塞的线程，直到 <code>head</code> 因为某个线程也成功地获得到了共享锁而被更新为止</li></ul><p>因为共享锁模式下，共同持有锁的多个线程势必将带来比较复杂的竞争，笔者对这部分内容的理解也不是很透彻，推荐阅读文末 Reference 中的美团技术博客（<a href=https://tech.meituan.com/2019/12/05/aqs-theory-and-apply.html>从ReentrantLock的实现看AQS的原理及应用 - 美团技术团队</a>），其中有较好的分析。</p><h2 class=heading id=共享锁模式下的解锁操作>共享锁模式下的解锁操作
+<a class=anchor href=#%e5%85%b1%e4%ba%ab%e9%94%81%e6%a8%a1%e5%bc%8f%e4%b8%8b%e7%9a%84%e8%a7%a3%e9%94%81%e6%93%8d%e4%bd%9c>#</a></h2><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>AbstractQueuedSynchronizer</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractOwnableSynchronizer
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Releases in shared mode.  Implemented by unblocking one or more
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * threads if {@link #tryReleaseShared} returns true.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param arg the release argument.  This value is conveyed to
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *        {@link #tryReleaseShared} but is otherwise uninterpreted
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *        and can represent anything you like.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return the value returned from {@link #tryReleaseShared}
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>releaseShared</span>(<span style=font-weight:700;text-decoration:underline>int</span> arg) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (tryReleaseShared(arg)) {
+</span></span><span style=display:flex><span>            doReleaseShared();
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>解锁操作很简单，调用了同步器实现的 <code>tryReleaseShared</code> 方法，如果成功释放了共享资源则调用 <code>doReleaseShared</code> 唤醒后续线程。</p><h1 class=heading id=reference>Reference
+<a class=anchor href=#reference>#</a></h1><ol><li>AQS 源码</li><li><a href=https://gee.cs.oswego.edu/dl/papers/aqs.pdf>https://gee.cs.oswego.edu/dl/papers/aqs.pdf</a></li><li><a href=https://tech.meituan.com/2019/12/05/aqs-theory-and-apply.html>从ReentrantLock的实现看AQS的原理及应用 - 美团技术团队</a></li><li><a href=https://www.cnblogs.com/taleLaugh/p/15257784.html>Java并发之AQS详解 - 拉夫德鲁 - 博客园</a></li></ol></div></article><div class=single-comments><script src=https://giscus.app/client.js data-repo data-repo-id data-category data-category-id data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=0 data-input-position=top data-theme=light data-lang=en data-loading=lazy crossorigin=anonymous async></script></div><div class=single-pagination><hr><div class=flexnowrap><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/archive/12_clh_queue_lock/>深入理解 CLH Queue Lock</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/archive/14_reentrantlock/>深入理解 ReentrantLock</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>Powered by
+<a href=https://gohugo.io/>Hugo</a>
+and
+<a href=https://github.com/tomfran/typo>tomfran/typo</a></p></footer></body><script src=/js/theme-switch.js></script><script defer src=/js/copy-code.js></script></html>

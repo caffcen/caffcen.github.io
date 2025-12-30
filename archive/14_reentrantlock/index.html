@@ -1,0 +1,169 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://caffcen.github.io/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://caffcen.github.io/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://caffcen.github.io/favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://caffcen.github.io/android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://caffcen.github.io/apple-touch-icon.png><meta name=description content><title>深入理解 ReentrantLock | Lihang Liu's Homepage</title><link rel=canonical href=https://caffcen.github.io/archive/14_reentrantlock/><meta property="og:url" content="https://caffcen.github.io/archive/14_reentrantlock/"><meta property="og:site_name" content="Lihang Liu's Homepage"><meta property="og:title" content="深入理解 ReentrantLock"><meta property="og:description" content="剖析ReentrantLock的源码实现，详解其公平锁与非公平锁的工作原理及与AQS框架的关联机制"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="archive"><meta property="article:published_time" content="2024-06-18T16:04:41+08:00"><meta property="article:modified_time" content="2025-11-23T14:50:26-05:00"><link rel=stylesheet href=/assets/combined.min.57df9e7d692553f966cff4593ede6b53efb74da234876bacffeac774bd572e53.css media=all></head><body class=auto><div class=content><header><div class=header><h1 class=header-title><a href=https://caffcen.github.io/>Lihang Liu's Homepage</a></h1><div class=header-menu><p class=small><a href=/>/Home</a></p><p class=small><a href=/blog/>/Blog</a></p><p class=small><a href=/archive/>/Archive</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a><span class=breadcrumbs-separator>/</span><a href=/archive/>Archive</a><span class=breadcrumbs-separator>/</span>
+<a href=/archive/14_reentrantlock/>深入理解 ReentrantLock</a></div><div><article><header class=single-intro-container><h1 class=single-title>深入理解 ReentrantLock</h1><p class=single-summary>剖析ReentrantLock的源码实现，详解其公平锁与非公平锁的工作原理及与AQS框架的关联机制</p><div class=single-subsummary><div><p class=single-date><time datetime=2024-06-18T16:04:41+08:00>June 18, 2024</time></p></div></div></header><div class=single-content><p>本文是对 <code>ReentrantLock</code> 源码的分析以及总结，详细介绍了其是实现公平与非公平锁的加解锁的原理、其与 <code>AbstractQueuedSynchronizer</code> 的关联。</p><h1 class=heading id=简介>简介
+<a class=anchor href=#%e7%ae%80%e4%bb%8b>#</a></h1><p>可重入锁是 JUC 包中提供的一种可重入的互斥锁，其实现基于 [[AbstractQueuedSynchronizer]] ， Java 源码的注释很好的说明了 <code>ReentrantLock</code> 是什么： <code>ReentrantLock</code> 和 Java <code>synchronized</code> 的语义一致，但包含更多的功能。</p><blockquote><p>A reentrant mutual exclusion Lock with the same basic behavior and semantics as the implicit monitor lock accessed using synchronized methods and statements, but with extended capabilities.</p></blockquote><h1 class=heading id=代码结构>代码结构
+<a class=anchor href=#%e4%bb%a3%e7%a0%81%e7%bb%93%e6%9e%84>#</a></h1><p>AQS 和其实现类之间的关系属于模板方法：AQS 提供基础的算法框架，实现类实现抽象方法来实现自己独特的功能和语义。 <code>AbstractQueuedSynchronizer</code> 的源码注释中有这么一段话，很好地说明了 AQS 与 JUC 包中具体同步器之间的关系：</p><blockquote><p>Subclasses should be defined as non-public internal helper classes that are used to implement the synchronization properties of their enclosing class. Class AbstractQueuedSynchronizer does not implement any synchronization interface. Instead it defines methods such as acquireInterruptibly that can be invoked as appropriate by concrete locks and related synchronizers to implement their public methods.</p></blockquote><p>有个这样一个前提，我们才能更好地理解 <code>RenentrantLock</code> 的实现和原理。</p><p><code>ReentrantLock</code> 的整体结构如下：</p><ul><li><code>ReentrantLock</code> 实现了 <code>Lock</code> 接口，使用者仅需调用 <code>lock</code> 和 <code>unlock</code> 接口即可实现加解锁。</li><li>抽象内部类 <code>Sync</code> 继承了 <code>AbstractQueuedSynchronizer</code> ， <code>Sync</code> 类实现了不分 AQS 中定义的模板方法，比如 <code>tryRelease</code> 和 <code>isHeldExclusively</code></li><li>为了支持公平锁和非公平锁两种语义， <code>RenentrantLock</code> 内部定义了 <code>FairSync</code> 和 <code>NonfairSync</code> 两个继承自 <code>Sync</code> 的类， <code>FaireSync</code> 和 <code>NonfairSync</code> 实现 AQS 中定义的 <code>tryAcquire</code> 模板方法，实现了公平锁及非公平锁的加锁逻辑。</li></ul><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>ReentrantLock</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> Lock, java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Sync sync;  <span style=color:#888;font-style:italic>// 同步器变量</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// Sync 继承自 AQS，实现了 AQS 中定义的模板方法</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>Sync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractQueuedSynchronizer {...}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// 非公平锁实现类</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>NonfairSync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> Sync {...}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// 公平锁实现类</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>FairSync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> Sync {...}
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h1 class=heading id=源码分析>源码分析
+<a class=anchor href=#%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90>#</a></h1><h2 class=heading id=构造函数>构造函数
+<a class=anchor href=#%e6%9e%84%e9%80%a0%e5%87%bd%e6%95%b0>#</a></h2><p><code>ReentrantLock</code> 在构造函数时可以传入一个不二参数，来生成一个公平锁实例，默认情况下的 <code>ReentrantLock</code> 是非公平锁：</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>ReentrantLock</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> Lock, java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Creates an instance of {@code ReentrantLock}.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * This is equivalent to using {@code ReentrantLock(false)}.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=color:#666;font-weight:700;font-style:italic>ReentrantLock</span>() {
+</span></span><span style=display:flex><span>        sync = <span style=font-weight:700;text-decoration:underline>new</span> NonfairSync();
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * Creates an instance of {@code ReentrantLock} with the
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * given fairness policy.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param fair {@code true} if this lock should use a fair ordering policy
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=color:#666;font-weight:700;font-style:italic>ReentrantLock</span>(<span style=font-weight:700;text-decoration:underline>boolean</span> fair) {
+</span></span><span style=display:flex><span>        sync = fair ? <span style=font-weight:700;text-decoration:underline>new</span> FairSync() : <span style=font-weight:700;text-decoration:underline>new</span> NonfairSync();
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 class=heading id=非公平锁加锁实现>非公平锁加锁实现
+<a class=anchor href=#%e9%9d%9e%e5%85%ac%e5%b9%b3%e9%94%81%e5%8a%a0%e9%94%81%e5%ae%9e%e7%8e%b0>#</a></h2><p>非公平锁的加锁过程如下：</p><ol><li>调用 <code>NonfairSync</code> 实现的 <code>lock</code> 方法，该方法将调用 AQS 中的 <code>compareAndSetState</code> ，看能否直接获取锁，如果该方法返回 <code>true</code> 那么线程将设置当前线程为 <code>ReentrantLock</code> 的独占持有者；</li><li>如果 AQS <code>state</code> 状态变量不为 0，则调用 AQS 中的 <code>acquire</code> 方法；</li><li>AQS 的 <code>acquire</code> 会调用实现类的 <code>tryAcquire</code> 方法，也就是 <code>NonfairSync</code> 自己实现的 <code>tryAcquire</code> 方法，该方法会调用 <code>Sync</code> 中定义的 <code>nonfairTryAcquire</code></li><li><code>Sync</code> 中的 <code>nonfairTryAcquire</code> 将尝试原子性地更新 AQS 中的 <code>state</code> 状态变量，这里有两种情况：<ol><li>当前线程是 <code>ReentrantLock</code> 的持有者，那么只需更新 AQS 的 <code>state</code> 状态变量即可，并返回 <code>true</code> 表示成功获取锁;</li><li>如果当前线程不是可重入锁的持有者，则判断当前是否可以获取锁，并尝试原子性更新 AQS 的 <code>state</code> 状态变量，成功则返回 <code>true</code> ，否则返回 <code>false</code></li></ol></li><li>失败后将返回到 AQS 的 <code>acquire</code> 中，将当前线程加入到 AQS 的等待队列里。</li></ol><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>ReentrantLock</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> Lock, java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>Sync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractQueuedSynchronizer {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * Performs non-fair tryLock.  tryAcquire is implemented in
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * subclasses, but both need nonfair try for trylock method.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         */</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>nonfairTryAcquire</span>(<span style=font-weight:700;text-decoration:underline>int</span> acquires) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Thread current = Thread.currentThread();
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> c = getState();
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (c == 0) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (compareAndSetState(0, acquires)) {
+</span></span><span style=display:flex><span>                    setExclusiveOwnerThread(current);
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (current == getExclusiveOwnerThread()) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>int</span> nextc = c + acquires;
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (nextc &lt; 0) <span style=color:#888;font-style:italic>// overflow</span>
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>throw</span> <span style=font-weight:700;text-decoration:underline>new</span> Error(<span style=color:#666;font-style:italic>&#34;Maximum lock count exceeded&#34;</span>);
+</span></span><span style=display:flex><span>                setState(nextc);
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// 非公平锁实现类</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>NonfairSync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> Sync {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * Performs lock.  Try immediate barge, backing up to normal
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * acquire on failure.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         */</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>lock</span>() {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (compareAndSetState(0, 1))
+</span></span><span style=display:flex><span>                setExclusiveOwnerThread(Thread.currentThread());
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>else</span>
+</span></span><span style=display:flex><span>                acquire(1);
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>tryAcquire</span>(<span style=font-weight:700;text-decoration:underline>int</span> acquires) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>return</span> nonfairTryAcquire(acquires);
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 class=heading id=公平锁加锁实现>公平锁加锁实现
+<a class=anchor href=#%e5%85%ac%e5%b9%b3%e9%94%81%e5%8a%a0%e9%94%81%e5%ae%9e%e7%8e%b0>#</a></h2><p>公平锁加锁过程如下：</p><ol><li>调用 <code>FairSync</code> 的 <code>lock</code> 方法，其会调用 AQS 中的 <code>acquire</code> 方法；</li><li>AQS <code>acquire</code> 方法调用具体实现类，也就是 <code>FairSync</code> 自己的 <code>tryAcquire</code> 方法尝试获取锁；</li><li><code>tryAcuire</code> 首先会判断能否获取锁，也就是判断 AQS <code>state</code> 变量的值：<ol><li>如果为 0，则判断 AQS 的等待队列中是否有已经在排队的线程，有的话则返回 <code>false</code> ，回到 AQS 的 <code>acquire</code> 中进行后续入队操作。</li><li>如果不为 0，那么判断当前所是否是 <code>ReentrantLock</code> 的持有者线程，是则原子性更新 AQS 的 <code>state</code> 变量，否则返回 <code>false</code> ，回到 AQS 的 <code>acquire</code> 中进行后续入队操作。</li></ol></li></ol><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>ReentrantLock</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> Lock, java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>FairSync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> Sync {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>lock</span>() {
+</span></span><span style=display:flex><span>            acquire(1);
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * Fair version of tryAcquire.  Don&#39;t grant access unless
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         * recursive call or no waiters or is first.
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>         */</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>tryAcquire</span>(<span style=font-weight:700;text-decoration:underline>int</span> acquires) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> Thread current = Thread.currentThread();
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> c = getState();
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (c == 0) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (!hasQueuedPredecessors() &amp;&amp;
+</span></span><span style=display:flex><span>                    compareAndSetState(0, acquires)) {
+</span></span><span style=display:flex><span>                    setExclusiveOwnerThread(current);
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>                }
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (current == getExclusiveOwnerThread()) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>int</span> nextc = c + acquires;
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>if</span> (nextc &lt; 0)
+</span></span><span style=display:flex><span>                    <span style=font-weight:700;text-decoration:underline>throw</span> <span style=font-weight:700;text-decoration:underline>new</span> Error(<span style=color:#666;font-style:italic>&#34;Maximum lock count exceeded&#34;</span>);
+</span></span><span style=display:flex><span>                setState(nextc);
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 class=heading id=解锁实现>解锁实现
+<a class=anchor href=#%e8%a7%a3%e9%94%81%e5%ae%9e%e7%8e%b0>#</a></h2><p>无论是公平锁还是非公平锁实现，解锁代码逻辑是一样的，因此是由 <code>Sync</code> 类来实现的：</p><ol><li>计算解锁后 <code>state</code> 的变量值 <code>c</code></li><li>防御性判断当前线程是否为 <code>ReentrantLock</code> 的持有者线程，如果不是那么就有问题了，抛异常终止</li><li>判断 <code>c</code> 是否为 0，如果是则原子性地设置可重入锁的持有者线程为 <code>null</code></li><li>原子性更新 AQS 的 <code>state</code></li><li>返回锁是否被释放</li></ol><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>ReentrantLock</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>implements</span> Lock, java.io.Serializable {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>abstract</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>Sync</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>extends</span> AbstractQueuedSynchronizer {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;font-style:italic;text-decoration:underline>protected</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>tryRelease</span>(<span style=font-weight:700;text-decoration:underline>int</span> releases) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> c = getState() - releases;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (Thread.currentThread() != getExclusiveOwnerThread())
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>throw</span> <span style=font-weight:700;text-decoration:underline>new</span> IllegalMonitorStateException();
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>boolean</span> free = <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (c == 0) {
+</span></span><span style=display:flex><span>                free = <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>                setExclusiveOwnerThread(<span style=font-weight:700;text-decoration:underline>null</span>);
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>            setState(c);
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>return</span> free;
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 class=heading id=可重入性>可重入性
+<a class=anchor href=#%e5%8f%af%e9%87%8d%e5%85%a5%e6%80%a7>#</a></h2><p>从源码可以看出， <code>ReentrantLock</code> 的可重入性，来源于加锁时对 AQS <code>state</code> 变量值的判断：如果 <code>state</code> 值不为 0，则判断当前线程是否为锁的持有线程，如果是，则直接原子性的将 <code>state</code> 的值加一。</p><p>解锁时， <code>unlock</code> 方法调用 <code>Sync</code> 内的 <code>tryRelease</code> 方法，原子性的将 AQS 中的 <code>state</code> 值减一，如果 <code>state</code> 变为 0，则将 <code>ReentrantLock</code> 的持有者线程设为 <code>null</code> 。</p><p>这也就要求 <code>ReentrantLock</code> 的加锁和解锁必须是成对出现和匹配的，否则，因为少调用了 <code>tryRelease</code> 方法，AQS 的 <code>state</code> 不为 0，将导致排队的线程永远也无法获取锁。正如源码注释说的那样， <code>ReentrantLock</code> 的最佳实践：</p><blockquote><p>It is recommended practice to always immediately follow a call to lock with a try block, most typically in a before/after construction such as:</p></blockquote><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span> <span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>X</span> {
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>private</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>final</span> ReentrantLock lock = <span style=font-weight:700;text-decoration:underline>new</span> ReentrantLock ();
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>// ...</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;text-decoration:underline>void</span> <span style=color:#666;font-weight:700;font-style:italic>m</span> () {
+</span></span><span style=display:flex><span>        lock. <span style=color:#666;font-weight:700;font-style:italic>lock</span> ();  <span style=color:#888;font-style:italic>// block until condition holds</span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>try</span> {
+</span></span><span style=display:flex><span>            <span style=color:#888;font-style:italic>// ... method body</span>
+</span></span><span style=display:flex><span>        } <span style=font-weight:700;text-decoration:underline>finally</span> {
+</span></span><span style=display:flex><span>            lock. <span style=color:#666;font-weight:700;font-style:italic>unlock</span> ()
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h1 class=heading id=reference>Reference
+<a class=anchor href=#reference>#</a></h1><ol><li>Juc 源码</li></ol></div></article><div class=single-comments><script src=https://giscus.app/client.js data-repo data-repo-id data-category data-category-id data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=0 data-input-position=top data-theme=light data-lang=en data-loading=lazy crossorigin=anonymous async></script></div><div class=single-pagination><hr><div class=flexnowrap><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/archive/13_aqs_intro/>AbstractQueuedSynchronizer 简介</a></div></div></div><div class=single-pagination-next></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>Powered by
+<a href=https://gohugo.io/>Hugo</a>
+and
+<a href=https://github.com/tomfran/typo>tomfran/typo</a></p></footer></body><script src=/js/theme-switch.js></script><script defer src=/js/copy-code.js></script></html>

@@ -1,0 +1,193 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width"><link rel=icon type=image/ico href=https://caffcen.github.io/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://caffcen.github.io/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://caffcen.github.io/favicon-32x32.png><link rel=icon type=image/png sizes=192x192 href=https://caffcen.github.io/android-chrome-192x192.png><link rel=apple-touch-icon sizes=180x180 href=https://caffcen.github.io/apple-touch-icon.png><meta name=description content><title>LeetCode 笔记 4：Binary Search 的5种变体应用 | Lihang Liu's Homepage</title><link rel=canonical href=https://caffcen.github.io/archive/8_leetcode_note_4_binary_search/><meta property="og:url" content="https://caffcen.github.io/archive/8_leetcode_note_4_binary_search/"><meta property="og:site_name" content="Lihang Liu's Homepage"><meta property="og:title" content="LeetCode 笔记 4：Binary Search 的5种变体应用"><meta property="og:description" content="详细介绍二分查找算法的五种变体实现，包括查找目标是否存在、首次出现位置、最后出现位置等应用场景"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="archive"><meta property="article:published_time" content="2023-03-12T16:03:48+08:00"><meta property="article:modified_time" content="2025-11-23T14:50:26-05:00"><link rel=stylesheet href=/assets/combined.min.57df9e7d692553f966cff4593ede6b53efb74da234876bacffeac774bd572e53.css media=all></head><body class=auto><div class=content><header><div class=header><h1 class=header-title><a href=https://caffcen.github.io/>Lihang Liu's Homepage</a></h1><div class=header-menu><p class=small><a href=/>/Home</a></p><p class=small><a href=/blog/>/Blog</a></p><p class=small><a href=/archive/>/Archive</a></p></div></div></header><main class=main><div class=breadcrumbs><a href=/>Home</a><span class=breadcrumbs-separator>/</span><a href=/archive/>Archive</a><span class=breadcrumbs-separator>/</span>
+<a href=/archive/8_leetcode_note_4_binary_search/>LeetCode 笔记 4：Binary Search 的5种变体应用</a></div><div><article><header class=single-intro-container><h1 class=single-title>LeetCode 笔记 4：Binary Search 的5种变体应用</h1><p class=single-summary>详细介绍二分查找算法的五种变体实现，包括查找目标是否存在、首次出现位置、最后出现位置等应用场景</p><div class=single-subsummary><div><p class=single-date><time datetime=2023-03-12T16:03:48+08:00>March 12, 2023</time></p></div></div></header><div class=single-content><p>二分查找在算法题目中是十分常见的一类题目，但这类题目往往要求二分查找找出解集中的第一个、最后一个解，这个时候通常的二分查找算法就无法直接套用了。</p><p>本文将列举 5 种二分查找的变体应用，它们分别是：</p><ol><li>Contains，是否包含目标</li><li>Index of first occurrence of a key，目标第一次出现的下标</li><li>Index of last occurrence of a key，目标最后一次出现的下标</li><li>Index of least element greater than (or equal) to key，最小的大于（或大于等于）目标的下标</li><li>Index of greatest element less than (or equal to) key，最大的小于（或小于等于）目标的下标</li></ol><p>之后会更新几篇文章针对不同类型的题目进行分析。</p><p>这 5 中变体算法的代码如下：</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-java data-lang=java><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=font-weight:700;font-style:italic;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>BinarySearch</span> {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * 是否包含 key
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     *
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param nums 输入数组
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param key 目标
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return true 包含；false 不包含
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;text-decoration:underline>boolean</span> <span style=color:#666;font-weight:700;font-style:italic>contains</span>(<span style=font-weight:700;text-decoration:underline>int</span>[] nums, <span style=font-weight:700;text-decoration:underline>int</span> key) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> low = 0, high = nums.length - 1;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>while</span> (low &lt;= high) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> mid = low + (high - low) / 2;  <span style=color:#888;font-style:italic>// (low + high) / 2 可能导致溢出，因此采用这种方式计算</span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> midVal = nums[mid];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (midVal == key) {
+</span></span><span style=display:flex><span>                <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>true</span>;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (midVal &lt; key) {
+</span></span><span style=display:flex><span>                low = mid + 1;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (midVal &gt; key) {
+</span></span><span style=display:flex><span>                high = mid - 1;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> <span style=font-weight:700;text-decoration:underline>false</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param nums 输入数组
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param key 目标
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return 返回 key 第一次出现时的下标
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;text-decoration:underline>int</span> <span style=color:#666;font-weight:700;font-style:italic>first</span>(<span style=font-weight:700;text-decoration:underline>int</span>[] nums, <span style=font-weight:700;text-decoration:underline>int</span> key) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> ans = -1, low = 0, high = nums.length - 1;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>while</span> (low &lt;= high) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> mid = low + (high - low + 1) / 2;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> midVal = nums[mid];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (midVal &lt; key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// key 在 mid 右边</span>
+</span></span><span style=display:flex><span>                low = mid + 1;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (midVal &gt; key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// key 在 mid 左边</span>
+</span></span><span style=display:flex><span>                high = mid - 1;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (midVal == key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// mid 左边可能存在 key，因此左移右边界</span>
+</span></span><span style=display:flex><span>                ans = mid;
+</span></span><span style=display:flex><span>                high = mid - 1;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> ans;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param nums 输入数组
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param key 目标
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return 返回 key 最后出现时的下标
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;text-decoration:underline>int</span> <span style=color:#666;font-weight:700;font-style:italic>last</span>(<span style=font-weight:700;text-decoration:underline>int</span>[] nums, <span style=font-weight:700;text-decoration:underline>int</span> key) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> ans = -1, low = 0, high = nums.length - 1;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>while</span> (low &lt;= high) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> mid = low + (high - low + 1) / 2;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> midVal = nums[mid];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (midVal &lt; key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// key 在 mid 右边</span>
+</span></span><span style=display:flex><span>                low = mid + 1;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (midVal &gt; key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// key 在 mid 左边</span>
+</span></span><span style=display:flex><span>                high = mid - 1;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (midVal == key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 右边界任然可能存在 key，因此将 low 右移</span>
+</span></span><span style=display:flex><span>                ans = mid;
+</span></span><span style=display:flex><span>                low = mid + 1;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> ans;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param nums 输入数组
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param key 目标
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return 最小大于 key 的元素的下标
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;text-decoration:underline>int</span> <span style=color:#666;font-weight:700;font-style:italic>leastGreater</span>(<span style=font-weight:700;text-decoration:underline>int</span>[] nums, <span style=font-weight:700;text-decoration:underline>int</span> key) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> ans = -1, low = 0, high = nums.length - 1;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>while</span> (low &lt;= high) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> mid = low + (high - low + 1) / 2;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> midVal = nums[mid];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (midVal &lt; key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 最小大于 key 的元素在 mid 右边</span>
+</span></span><span style=display:flex><span>                low = mid + 1;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (midVal &gt; key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 任然存在比 midVal 更小的解，因此将 high 左移</span>
+</span></span><span style=display:flex><span>                ans = mid;
+</span></span><span style=display:flex><span>                high = mid - 1;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (midVal == key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 最小大于 key 的元素在 mid 右边</span>
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 可以和 midVal &lt; key 的情况进行合并</span>
+</span></span><span style=display:flex><span>                low = mid + 1;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> ans;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#888;font-style:italic>/**
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param nums 输入数组
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @param key 目标
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     * @return 最大的小于 key 的元素的下标
+</span></span></span><span style=display:flex><span><span style=color:#888;font-style:italic>     */</span>
+</span></span><span style=display:flex><span>    <span style=font-weight:700;font-style:italic;text-decoration:underline>public</span> <span style=font-weight:700;font-style:italic;text-decoration:underline>static</span> <span style=font-weight:700;text-decoration:underline>int</span> <span style=color:#666;font-weight:700;font-style:italic>greatestLesser</span>(<span style=font-weight:700;text-decoration:underline>int</span>[] nums, <span style=font-weight:700;text-decoration:underline>int</span> key) {
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>int</span> ans = -1, low = 0, high = nums.length - 1;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>while</span> (low &lt;= high) {
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> mid = low + (high - low + 1) / 2;
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>int</span> midVal = nums[mid];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>            <span style=font-weight:700;text-decoration:underline>if</span> (midVal &lt; key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 可能存在比 midVal 更大的解，因此右移 low</span>
+</span></span><span style=display:flex><span>                ans = mid;
+</span></span><span style=display:flex><span>                low = mid + 1;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (midVal &gt; key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// midVal 过大，解在 mid 左边</span>
+</span></span><span style=display:flex><span>                high = mid - 1;
+</span></span><span style=display:flex><span>            } <span style=font-weight:700;text-decoration:underline>else</span> <span style=font-weight:700;text-decoration:underline>if</span> (midVal == key) {
+</span></span><span style=display:flex><span>                <span style=color:#888;font-style:italic>// 同样，可以和 midVal &gt; key 进行合并</span>
+</span></span><span style=display:flex><span>                high = mid - 1;
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>return</span> ans;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>其中算法 <code>leastGreater</code> 和 <code>greatestLesser</code> 只需稍作修改即可用于求解大于等于以及小于等于的情况，因此不做赘述。</p><p>其中，变体 2 （目标第一次出现时的下标，上面的 <code>first</code> 算法）和 C++ <code>std::lower_bound()</code> 很类似：</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=font-weight:700;text-decoration:underline>template</span>&lt;<span style=font-weight:700;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>ForwardIt</span>, <span style=font-weight:700;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>T</span>&gt;
+</span></span><span style=display:flex><span>ForwardIt lower_bound(ForwardIt first, ForwardIt last, <span style=font-weight:700;text-decoration:underline>const</span> T&amp; value)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    ForwardIt it;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>typename</span> std::iterator_traits&lt;ForwardIt&gt;::difference_type count, step;
+</span></span><span style=display:flex><span>    count = std::distance(first, last);
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>while</span> (count &gt; 0)
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>        it = first; 
+</span></span><span style=display:flex><span>        step = count / 2; 
+</span></span><span style=display:flex><span>        std::advance(it, step);
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (*it &lt; value)
+</span></span><span style=display:flex><span>        {
+</span></span><span style=display:flex><span>            first = ++it; 
+</span></span><span style=display:flex><span>            count -= step + 1; 
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>else</span>
+</span></span><span style=display:flex><span>            count = step;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>return</span> first;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>变体 4，最大的小于（或小于等于）目标的元素的下标（上面的 <code>greatestLesser</code> 算法）和 C++ 的 <code>std::upper_bound()</code> 算法很类似：</p><div class=highlight><pre tabindex=0 style=background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=font-weight:700;text-decoration:underline>template</span>&lt;<span style=font-weight:700;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>ForwardIt</span>, <span style=font-weight:700;text-decoration:underline>class</span> <span style=color:#666;font-weight:700;font-style:italic>T</span>&gt;
+</span></span><span style=display:flex><span>ForwardIt upper_bound(ForwardIt first, ForwardIt last, <span style=font-weight:700;text-decoration:underline>const</span> T&amp; value)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    ForwardIt it;
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>typename</span> std::iterator_traits&lt;ForwardIt&gt;::difference_type count, step;
+</span></span><span style=display:flex><span>    count = std::distance(first, last);
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>while</span> (count &gt; 0)
+</span></span><span style=display:flex><span>    {
+</span></span><span style=display:flex><span>        it = first; 
+</span></span><span style=display:flex><span>        step = count / 2; 
+</span></span><span style=display:flex><span>        std::advance(it, step);
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>if</span> (!(value &lt; *it))
+</span></span><span style=display:flex><span>        {
+</span></span><span style=display:flex><span>            first = ++it;
+</span></span><span style=display:flex><span>            count -= step + 1;
+</span></span><span style=display:flex><span>        } 
+</span></span><span style=display:flex><span>        <span style=font-weight:700;text-decoration:underline>else</span>
+</span></span><span style=display:flex><span>            count = step;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>    <span style=font-weight:700;text-decoration:underline>return</span> first;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h1 class=heading id=reference>Reference
+<a class=anchor href=#reference>#</a></h1><ol><li><a href=https://www.geeksforgeeks.org/variants-of-binary-search/>Variants of Binary Search - GeeksforGeeks</a></li><li><a href=https://en.cppreference.com/w/cpp/algorithm/lower_bound>std::lower_bound - cppreference.com</a></li><li><a href=https://en.cppreference.com/w/cpp/algorithm/upper_bound>std::upper_bound - cppreference.com</a></li></ol></div></article><div class=single-comments><script src=https://giscus.app/client.js data-repo data-repo-id data-category data-category-id data-mapping=pathname data-strict=0 data-reactions-enabled=1 data-emit-metadata=0 data-input-position=top data-theme=light data-lang=en data-loading=lazy crossorigin=anonymous async></script></div><div class=single-pagination><hr><div class=flexnowrap><div class=single-pagination-prev><div class=single-pagination-container-prev><div class=single-pagination-text>←</div><div class=single-pagination-text><a href=/archive/7_mysql_innodb_bin_redo_undo_log/>MySQL InnoDB Bin Log, Redo Log, Undo Log 详解</a></div></div></div><div class=single-pagination-next><div class=single-pagination-container-next><div class=single-pagination-text><a href=/archive/9_btree/>深入理解 B-Tree</a></div><div class=single-pagination-text>→</div></div></div></div><hr></div><div class=back-to-top><a href=#top>back to top</a></div></div></main></div><footer><p>Powered by
+<a href=https://gohugo.io/>Hugo</a>
+and
+<a href=https://github.com/tomfran/typo>tomfran/typo</a></p></footer></body><script src=/js/theme-switch.js></script><script defer src=/js/copy-code.js></script></html>
